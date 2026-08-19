@@ -11,10 +11,18 @@ import {
 export interface CreateTicketPayload {
   subject: string;
   description: string;
+  // Opcionales: el Usuario Final no las envía; Admin/Técnico las asigna
+  // al crear o después, vía ClassificationPayload.
+  categoryId?: number;
+  subcategoryId?: number;
+  typificationId?: number;
+  priority?: TicketPriority;
+}
+
+export interface ClassificationPayload {
   categoryId: number;
   subcategoryId: number;
   typificationId: number;
-  priority?: TicketPriority;
 }
 
 export interface TicketListFilters {
@@ -49,12 +57,18 @@ export const ticketsApi = {
   create: (payload: CreateTicketPayload) =>
     httpClient.post<Ticket>('/tickets', payload).then((r) => r.data),
 
+  classify: (id: string, payload: ClassificationPayload) =>
+    httpClient.patch<Ticket>(`/tickets/${id}`, payload).then((r) => r.data),
+
+  updatePriority: (id: string, priority: TicketPriority) =>
+    httpClient.patch<Ticket>(`/tickets/${id}`, { priority }).then((r) => r.data),
+
   addComment: (id: string, body: string, isInternal: boolean) =>
     httpClient
       .post<TicketComment>(`/tickets/${id}/comments`, { body, isInternal })
       .then((r) => r.data),
 
-  changeStatus: (id: string, toStatus: TicketStatusCode, reason?: string) =>
+  changeStatus: (id: string, toStatus: TicketStatusCode, reason: string) =>
     httpClient.patch<Ticket>(`/tickets/${id}/status`, { toStatus, reason }).then((r) => r.data),
 
   assign: (id: string, technicianId: string, reason?: string) =>

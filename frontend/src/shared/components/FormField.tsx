@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { forwardRef, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 interface FieldWrapperProps {
   label: string;
@@ -26,14 +26,22 @@ interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   hint?: string;
 }
 
-export function TextField({ label, error, hint, id, className = '', ...rest }: TextFieldProps) {
+// forwardRef es obligatorio aquí: react-hook-form's register() devuelve un
+// `ref` que necesita llegar al <input> nativo. Sin forwardRef, React
+// descarta ese ref en silencio (con un warning en consola) porque un
+// componente de función normal no puede recibir refs — y sin ref,
+// react-hook-form nunca lee el valor real del campo (queda `undefined`).
+export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
+  { label, error, hint, id, className = '', ...rest },
+  ref,
+) {
   const inputId = id ?? rest.name;
   return (
     <FieldWrapper label={label} htmlFor={inputId!} error={error} hint={hint}>
-      <input id={inputId} className={`input ${className}`} {...rest} />
+      <input ref={ref} id={inputId} className={`input ${className}`} {...rest} />
     </FieldWrapper>
   );
-}
+});
 
 interface TextAreaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
@@ -41,14 +49,17 @@ interface TextAreaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement>
   hint?: string;
 }
 
-export function TextAreaField({ label, error, hint, id, className = '', ...rest }: TextAreaFieldProps) {
+export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(function TextAreaField(
+  { label, error, hint, id, className = '', ...rest },
+  ref,
+) {
   const inputId = id ?? rest.name;
   return (
     <FieldWrapper label={label} htmlFor={inputId!} error={error} hint={hint}>
-      <textarea id={inputId} className={`input ${className}`} rows={4} {...rest} />
+      <textarea ref={ref} id={inputId} className={`input ${className}`} rows={4} {...rest} />
     </FieldWrapper>
   );
-}
+});
 
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string;
@@ -56,13 +67,16 @@ interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   hint?: string;
 }
 
-export function SelectField({ label, error, hint, id, className = '', children, ...rest }: SelectFieldProps) {
+export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(function SelectField(
+  { label, error, hint, id, className = '', children, ...rest },
+  ref,
+) {
   const inputId = id ?? rest.name;
   return (
     <FieldWrapper label={label} htmlFor={inputId!} error={error} hint={hint}>
-      <select id={inputId} className={`select ${className}`} {...rest}>
+      <select ref={ref} id={inputId} className={`select ${className}`} {...rest}>
         {children}
       </select>
     </FieldWrapper>
   );
-}
+});

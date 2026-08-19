@@ -55,7 +55,6 @@ export class ClassificationService {
               id: typ.id,
               name: typ.name,
               defaultPriority: typ.defaultPriority,
-              slaHours: typ.slaHours,
             })),
         })),
     }));

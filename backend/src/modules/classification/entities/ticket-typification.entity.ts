@@ -38,9 +38,6 @@ export class TicketTypification {
   })
   defaultPriority: TicketPriority;
 
-  @Column({ name: 'sla_hours', type: 'int', nullable: true })
-  slaHours?: number;
-
   @Column({ name: 'display_order', type: 'smallint', default: 0 })
   displayOrder: number;
 

@@ -17,12 +17,15 @@ import { AuthenticatedUser } from './types/authenticated-user.type';
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MINUTES = 15;
 
-interface RequestMeta {
+// Exportadas (no solo locales): con "declaration": true, TypeScript exige
+// que cualquier tipo usado en la firma de un método público de una clase
+// exportada sea, a su vez, nombrable/exportable para poder generar el .d.ts.
+export interface RequestMeta {
   ipAddress?: string;
   userAgent?: string;
 }
 
-interface TokenPair {
+export interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }

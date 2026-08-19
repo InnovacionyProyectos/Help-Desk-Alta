@@ -31,17 +31,20 @@ export class Ticket {
   @Column({ type: 'text' })
   description: string;
 
-  @ManyToOne(() => TicketCategory, { eager: true })
+  // Opcionales: el Usuario Final crea el ticket sin clasificar (solo
+  // asunto/descripción); un Técnico o el Administrador la asigna después
+  // vía TicketsService.update.
+  @ManyToOne(() => TicketCategory, { eager: true, nullable: true })
   @JoinColumn({ name: 'category_id' })
-  category: TicketCategory;
+  category?: TicketCategory;
 
-  @ManyToOne(() => TicketSubcategory, { eager: true })
+  @ManyToOne(() => TicketSubcategory, { eager: true, nullable: true })
   @JoinColumn({ name: 'subcategory_id' })
-  subcategory: TicketSubcategory;
+  subcategory?: TicketSubcategory;
 
-  @ManyToOne(() => TicketTypification, { eager: true })
+  @ManyToOne(() => TicketTypification, { eager: true, nullable: true })
   @JoinColumn({ name: 'typification_id' })
-  typification: TicketTypification;
+  typification?: TicketTypification;
 
   @ManyToOne(() => TicketStatus, { eager: true })
   @JoinColumn({ name: 'status_id' })

@@ -7,23 +7,32 @@ import { useNavigate } from 'react-router-dom';
 import { ticketsApi } from './api/ticketsApi';
 import { attachmentsApi } from './api/attachmentsApi';
 import { useCascadeSelect } from '@shared/hooks/useCascadeSelect';
+import { useAuthStore } from '@app/store/authStore';
 import { TextField, TextAreaField, SelectField } from '@shared/components/FormField';
 import { Button } from '@shared/components/Button';
 import { Dropzone } from '@shared/components/Dropzone';
 import { StagedFileList } from './components/StagedFileList';
 
+// La clasificación queda como strings de <select> (no coerce.number()):
+// así "sin seleccionar" es simplemente '' en vez de forzar un número
+// inválido, y se convierte a number recién al armar el payload en
+// onSubmit. Es opcional para todos los roles; el Usuario Final
+// directamente no ve estos campos (los asigna después Admin/Técnico).
 const createTicketSchema = z.object({
   subject: z.string().min(5, 'El asunto debe tener al menos 5 caracteres').max(200),
   description: z.string().min(10, 'Describa el problema con más detalle'),
-  categoryId: z.coerce.number().int().positive('Seleccione una categoría'),
-  subcategoryId: z.coerce.number().int().positive('Seleccione una subcategoría'),
-  typificationId: z.coerce.number().int().positive('Seleccione una tipificación'),
+  categoryId: z.string().optional(),
+  subcategoryId: z.string().optional(),
+  typificationId: z.string().optional(),
 });
 
 type CreateTicketFormValues = z.infer<typeof createTicketSchema>;
 
 export function CreateTicketPage() {
   const navigate = useNavigate();
+  const role = useAuthStore((state) => state.user?.role);
+  const canClassify = role === 'ADMIN' || role === 'TECHNICIAN';
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
@@ -42,10 +51,18 @@ export function CreateTicketPage() {
   const { categories, subcategories, typifications, isLoading } = useCascadeSelect(
     categoryId ? Number(categoryId) : undefined,
     subcategoryId ? Number(subcategoryId) : undefined,
+    canClassify,
   );
 
   const createMutation = useMutation({
-    mutationFn: (values: CreateTicketFormValues) => ticketsApi.create(values),
+    mutationFn: (values: CreateTicketFormValues) =>
+      ticketsApi.create({
+        subject: values.subject,
+        description: values.description,
+        categoryId: values.categoryId ? Number(values.categoryId) : undefined,
+        subcategoryId: values.subcategoryId ? Number(values.subcategoryId) : undefined,
+        typificationId: values.typificationId ? Number(values.typificationId) : undefined,
+      }),
     onSuccess: async (ticket) => {
       // El ticket no existe hasta que se crea, así que los adjuntos elegidos
       // en el formulario se suben recién aquí, referenciando su id.
@@ -82,56 +99,52 @@ export function CreateTicketPage() {
             {...register('description')}
           />
 
-          <div className="form-row">
-            <SelectField
-              label="Categoría"
-              error={errors.categoryId?.message}
-              disabled={isLoading}
-              {...register('categoryId', {
-                onChange: () => {
-                  resetField('subcategoryId', { defaultValue: '' as any });
-                  resetField('typificationId', { defaultValue: '' as any });
-                },
-              })}
-            >
-              <option value="">Seleccione...</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </SelectField>
+          {canClassify && (
+            <div className="form-row">
+              <SelectField
+                label="Categoría (opcional)"
+                hint="Si no la conoce, déjela en blanco: un técnico la asignará."
+                disabled={isLoading}
+                {...register('categoryId', {
+                  onChange: () => {
+                    resetField('subcategoryId', { defaultValue: '' });
+                    resetField('typificationId', { defaultValue: '' });
+                  },
+                })}
+              >
+                <option value="">Sin clasificar</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </SelectField>
 
-            <SelectField
-              label="Subcategoría"
-              error={errors.subcategoryId?.message}
-              disabled={!categoryId}
-              {...register('subcategoryId', {
-                onChange: () => resetField('typificationId', { defaultValue: '' as any }),
-              })}
-            >
-              <option value="">Seleccione...</option>
-              {subcategories.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </SelectField>
+              <SelectField
+                label="Subcategoría"
+                disabled={!categoryId}
+                {...register('subcategoryId', {
+                  onChange: () => resetField('typificationId', { defaultValue: '' }),
+                })}
+              >
+                <option value="">Seleccione...</option>
+                {subcategories.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </SelectField>
 
-            <SelectField
-              label="Tipificación"
-              error={errors.typificationId?.message}
-              disabled={!subcategoryId}
-              {...register('typificationId')}
-            >
-              <option value="">Seleccione...</option>
-              {typifications.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </SelectField>
-          </div>
+              <SelectField label="Tipificación" disabled={!subcategoryId} {...register('typificationId')}>
+                <option value="">Seleccione...</option>
+                {typifications.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+          )}
 
           <div className="form-field">
             <label>Adjuntos (opcional)</label>

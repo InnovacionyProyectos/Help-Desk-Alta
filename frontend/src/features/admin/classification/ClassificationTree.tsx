@@ -149,7 +149,6 @@ export function ClassificationTree({ categories }: { categories: CategoryNode[] 
                             {typ.name}
                             <ActiveBadge isActive={typ.isActive} />
                             <span className="badge-muted">{TICKET_PRIORITY_LABELS[typ.defaultPriority]}</span>
-                            {typ.slaHours != null && <span className="badge-muted">SLA {typ.slaHours}h</span>}
                           </div>
                           <div className="tree-node__actions">
                             <button

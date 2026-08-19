@@ -144,9 +144,9 @@ export class ReportsService {
           table: {
             widths: ['30%', '70%'],
             body: [
-              ['Categoría', ticket.category.name],
-              ['Subcategoría', ticket.subcategory.name],
-              ['Tipificación', ticket.typification.name],
+              ['Categoría', ticket.category?.name ?? 'Sin clasificar'],
+              ['Subcategoría', ticket.subcategory?.name ?? '—'],
+              ['Tipificación', ticket.typification?.name ?? '—'],
               ['Solicitante', ticket.requester.fullName],
               ['Área', ticket.assignedArea?.name ?? '—'],
               ['Asignado a', ticket.assignedTo?.fullName ?? 'Sin asignar'],

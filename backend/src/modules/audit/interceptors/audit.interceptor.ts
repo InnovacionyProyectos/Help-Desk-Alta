@@ -47,7 +47,7 @@ export class AuditInterceptor implements NestInterceptor {
     if (!action) return next.handle();
 
     return next.handle().pipe(
-      tap((result) => {
+      tap((result: Record<string, unknown> | undefined) => {
         const entityId = (result?.id ?? request.params?.id ?? 'unknown').toString();
 
         void this.auditService.record({

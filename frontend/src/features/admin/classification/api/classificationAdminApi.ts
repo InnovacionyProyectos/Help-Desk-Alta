@@ -12,7 +12,6 @@ interface ClassificationNodeBase {
 
 export interface TypificationNode extends ClassificationNodeBase {
   defaultPriority: TicketPriority;
-  slaHours?: number;
 }
 
 export interface SubcategoryNode extends ClassificationNodeBase {
@@ -34,7 +33,6 @@ export interface ClassificationNodePayload {
 export interface TypificationPayload extends ClassificationNodePayload {
   subcategoryId?: number;
   defaultPriority?: TicketPriority;
-  slaHours?: number;
 }
 
 export const classificationAdminApi = {

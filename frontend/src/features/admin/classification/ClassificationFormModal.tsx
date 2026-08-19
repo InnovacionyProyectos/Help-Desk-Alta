@@ -13,17 +13,17 @@ import { Modal } from '@shared/components/Modal';
 import { TextField, TextAreaField, SelectField } from '@shared/components/FormField';
 import { Button } from '@shared/components/Button';
 
-// Un único esquema para los 3 niveles: los campos de tipificación
-// (defaultPriority/slaHours) quedan opcionales y solo se muestran/usan
-// cuando kind === 'typification'. Evita 3 tipos de formulario distintos
-// para una estructura que es, en el fondo, la misma (nombre + jerarquía).
+// Un único esquema para los 3 niveles: el campo de tipificación
+// (defaultPriority) queda opcional y solo se muestra/usa cuando
+// kind === 'typification'. Evita 3 tipos de formulario distintos para una
+// estructura que es, en el fondo, la misma (nombre + jerarquía).
+// Nota: SLA se retiró de la clasificación a propósito; se maneja aparte.
 const schema = z.object({
   name: z.string().min(1, 'Requerido').max(100),
   code: z.string().max(20).optional().or(z.literal('')),
   description: z.string().max(255).optional().or(z.literal('')),
   displayOrder: z.coerce.number().int().min(0).optional(),
   defaultPriority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
-  slaHours: z.coerce.number().int().min(0).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -61,7 +61,6 @@ export function ClassificationFormModal({ kind, node, parentId, onClose }: Class
           description: node.description ?? '',
           displayOrder: node.displayOrder,
           defaultPriority: typificationNode?.defaultPriority,
-          slaHours: typificationNode?.slaHours,
         }
       : { displayOrder: 0 },
   });
@@ -90,7 +89,6 @@ export function ClassificationFormModal({ kind, node, parentId, onClose }: Class
       const typificationBody = {
         ...base,
         defaultPriority: values.defaultPriority as TicketPriority,
-        slaHours: values.slaHours,
       };
       return isEdit
         ? classificationAdminApi.updateTypification(node!.id, typificationBody)
@@ -114,22 +112,13 @@ export function ClassificationFormModal({ kind, node, parentId, onClose }: Class
         />
 
         {kind === 'typification' && (
-          <div className="form-row">
-            <SelectField label="Prioridad por defecto" {...register('defaultPriority')}>
-              {(Object.keys(TICKET_PRIORITY_LABELS) as TicketPriority[]).map((p) => (
-                <option key={p} value={p}>
-                  {TICKET_PRIORITY_LABELS[p]}
-                </option>
-              ))}
-            </SelectField>
-            <TextField
-              label="SLA (horas, opcional)"
-              type="number"
-              min={0}
-              error={errors.slaHours?.message}
-              {...register('slaHours')}
-            />
-          </div>
+          <SelectField label="Prioridad por defecto" {...register('defaultPriority')}>
+            {(Object.keys(TICKET_PRIORITY_LABELS) as TicketPriority[]).map((p) => (
+              <option key={p} value={p}>
+                {TICKET_PRIORITY_LABELS[p]}
+              </option>
+            ))}
+          </SelectField>
         )}
 
         <TextField

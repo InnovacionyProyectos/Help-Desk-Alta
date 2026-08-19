@@ -1,6 +1,13 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { LessThanOrEqual, Repository, SelectQueryBuilder } from 'typeorm';
 import { Ticket } from './entities/ticket.entity';
 import { TicketStatus } from './entities/ticket-status.entity';
 import { TicketComment } from './entities/ticket-comment.entity';
@@ -13,6 +20,7 @@ import { ChangeTicketStatusDto } from './dto/change-status.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { FindTicketsQueryDto } from './dto/find-tickets-query.dto';
 import { TicketStatusCode } from './enums/ticket-status.enum';
+import { TicketPriority } from './enums/ticket-priority.enum';
 import { ClassificationService } from '@modules/classification/classification.service';
 import { AuditService } from '@modules/audit/audit.service';
 import { AuthenticatedUser } from '@modules/auth/types/authenticated-user.type';
@@ -20,6 +28,8 @@ import { PaginatedResultDto } from '@common/dto/paginated-result.dto';
 
 @Injectable()
 export class TicketsService {
+  private readonly logger = new Logger(TicketsService.name);
+
   constructor(
     @InjectRepository(Ticket) private readonly ticketsRepo: Repository<Ticket>,
     @InjectRepository(TicketStatus) private readonly statusRepo: Repository<TicketStatus>,
@@ -33,11 +43,24 @@ export class TicketsService {
   ) {}
 
   async create(dto: CreateTicketDto, requester: AuthenticatedUser): Promise<Ticket> {
-    const typification = await this.classificationService.validateChain(
-      dto.categoryId,
-      dto.subcategoryId,
-      dto.typificationId,
-    );
+    // El Usuario Final solo diligencia asunto/descripción; la clasificación
+    // (si viene) es un caso de uso de Admin/Técnico creando en nombre de
+    // alguien. No se aceptan combinaciones parciales (ej. solo categoryId).
+    const hasAnyClassification = dto.categoryId || dto.subcategoryId || dto.typificationId;
+    const hasFullClassification = dto.categoryId && dto.subcategoryId && dto.typificationId;
+    if (hasAnyClassification && !hasFullClassification) {
+      throw new BadRequestException(
+        'Debe indicar categoría, subcategoría y tipificación juntas, o ninguna',
+      );
+    }
+
+    const typification = hasFullClassification
+      ? await this.classificationService.validateChain(
+          dto.categoryId!,
+          dto.subcategoryId!,
+          dto.typificationId!,
+        )
+      : undefined;
 
     const openStatus = await this.statusRepo.findOneOrFail({
       where: { code: TicketStatusCode.OPEN },
@@ -47,11 +70,11 @@ export class TicketsService {
       ticketNumber: await this.generateTicketNumber(),
       subject: dto.subject,
       description: dto.description,
-      category: { id: dto.categoryId } as any,
-      subcategory: { id: dto.subcategoryId } as any,
-      typification: { id: dto.typificationId } as any,
+      category: dto.categoryId ? ({ id: dto.categoryId } as any) : undefined,
+      subcategory: dto.subcategoryId ? ({ id: dto.subcategoryId } as any) : undefined,
+      typification: dto.typificationId ? ({ id: dto.typificationId } as any) : undefined,
       status: openStatus,
-      priority: dto.priority ?? typification.defaultPriority,
+      priority: dto.priority ?? typification?.defaultPriority ?? TicketPriority.MEDIUM,
       requester: { id: requester.id } as any,
       // El ticket hereda el área del solicitante por defecto; se usa como
       // dimensión de filtrado en reportes (Excel por área).
@@ -210,6 +233,9 @@ export class TicketsService {
    * update) porque es la única vía para que reabra SU PROPIO ticket; por
    * eso siempre se resuelve el ticket con `actor` para aplicar el chequeo
    * de propiedad, y se restringe explícitamente qué transición puede pedir.
+   *
+   * CLOSED es terminal de verdad: ni Admin ni Técnico pueden reabrirlo o
+   * cambiar su estado una vez cerrado (a propósito, sin excepción de rol).
    */
   async changeStatus(
     id: string,
@@ -218,17 +244,19 @@ export class TicketsService {
   ): Promise<Ticket> {
     const ticket = await this.findOneOrFail(id, actor);
     const fromStatus = ticket.status;
+
+    if (fromStatus.code === TicketStatusCode.CLOSED) {
+      throw new ForbiddenException(
+        'El ticket está cerrado; no puede reabrirse ni cambiar de estado',
+      );
+    }
+
     const toStatus = await this.statusRepo.findOneOrFail({ where: { code: dto.toStatus } });
 
     if (actor.role === 'END_USER') {
-      const canReopen = fromStatus.isFinal || fromStatus.code === TicketStatusCode.RESOLVED;
-      if (dto.toStatus !== TicketStatusCode.REOPENED || !canReopen) {
-        throw new ForbiddenException(
-          'Un Usuario Final solo puede reabrir tickets resueltos o cerrados',
-        );
+      if (dto.toStatus !== TicketStatusCode.REOPENED || fromStatus.code !== TicketStatusCode.RESOLVED) {
+        throw new ForbiddenException('Un Usuario Final solo puede reabrir tickets resueltos');
       }
-    } else if (fromStatus.isFinal && actor.role !== 'ADMIN' && dto.toStatus !== TicketStatusCode.REOPENED) {
-      throw new ForbiddenException('El ticket está cerrado; solo puede reabrirse');
     }
 
     ticket.status = toStatus;
@@ -261,6 +289,56 @@ export class TicketsService {
   }
 
   /**
+   * Cierre automático: todo ticket que lleve 24 horas en estado Resuelto
+   * pasa a Cerrado sin intervención humana. Corre cada 10 minutos; el
+   * margen de hasta 10 min de retraso frente a las 24h exactas es
+   * aceptable para este caso de uso.
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async autoCloseResolvedTickets(): Promise<void> {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const dueTickets = await this.ticketsRepo.find({
+      where: { status: { code: TicketStatusCode.RESOLVED }, resolvedAt: LessThanOrEqual(cutoff) },
+    });
+
+    if (dueTickets.length === 0) return;
+
+    const closedStatus = await this.statusRepo.findOneOrFail({
+      where: { code: TicketStatusCode.CLOSED },
+    });
+    const reason = 'Cierre automático: 24 horas en estado Resuelto sin actividad';
+
+    for (const ticket of dueTickets) {
+      const fromStatusId = ticket.status.id;
+      ticket.status = closedStatus;
+      ticket.closedAt = new Date();
+      await this.ticketsRepo.save(ticket);
+
+      await this.statusHistoryRepo.save(
+        this.statusHistoryRepo.create({
+          ticket: { id: ticket.id } as any,
+          fromStatus: { id: fromStatusId } as any,
+          toStatus: { id: closedStatus.id } as any,
+          changedBy: undefined, // null = acción del sistema
+          reason,
+        }),
+      );
+
+      await this.auditService.record({
+        userId: undefined,
+        action: 'CHANGE_STATUS',
+        entity: 'Ticket',
+        entityId: ticket.id,
+        oldValues: { status: TicketStatusCode.RESOLVED },
+        newValues: { status: TicketStatusCode.CLOSED, reason },
+      });
+    }
+
+    this.logger.log(`Cierre automático aplicado a ${dueTickets.length} ticket(s) resuelto(s) hace 24h+`);
+  }
+
+  /**
    * Línea de tiempo combinada (cambios de estado + reasignaciones) para la
    * vista de detalle del ticket, ordenada cronológicamente.
    */
@@ -286,7 +364,7 @@ export class TicketsService {
         createdAt: e.createdAt,
         from: e.fromStatus?.name,
         to: e.toStatus.name,
-        by: e.changedBy.fullName,
+        by: e.changedBy?.fullName ?? 'Sistema',
         reason: e.reason,
       })),
       ...assignmentEvents.map((e) => ({

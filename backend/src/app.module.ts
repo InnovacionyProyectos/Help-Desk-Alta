@@ -2,6 +2,7 @@ import { ClassSerializerInterceptor, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD, APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 
 import databaseConfig from './config/database.config';
@@ -33,6 +34,7 @@ import { ReportsModule } from '@modules/reports/reports.module';
       useFactory: databaseConfig, // ver src/config/database.config.ts
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]), // límite global de requests
+    ScheduleModule.forRoot(), // habilita @Cron() (ej. cierre automático de tickets a 24h)
 
     AuditModule,
     AuthModule,

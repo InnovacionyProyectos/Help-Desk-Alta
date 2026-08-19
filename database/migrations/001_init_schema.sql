@@ -125,7 +125,8 @@ CREATE TABLE ticket_typifications (
     description     VARCHAR(255),
     default_priority VARCHAR(10) NOT NULL DEFAULT 'MEDIUM'
                         CHECK (default_priority IN ('LOW','MEDIUM','HIGH','CRITICAL')),
-    sla_hours       INTEGER,                            -- preparado para módulo SLA futuro
+    -- SLA se maneja fuera de la clasificación (módulo SLA futuro, tabla
+    -- sla_contracts); se retiró de aquí a propósito.
     display_order   SMALLINT     NOT NULL DEFAULT 0,
     is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
     created_by      UUID REFERENCES users(id),
@@ -220,9 +221,12 @@ CREATE TABLE tickets (
     subject             VARCHAR(200) NOT NULL,
     description         TEXT NOT NULL,
 
-    category_id         INTEGER NOT NULL REFERENCES ticket_categories(id),
-    subcategory_id      INTEGER NOT NULL REFERENCES ticket_subcategories(id),
-    typification_id     INTEGER NOT NULL REFERENCES ticket_typifications(id),
+    -- Nulas a propósito: el Usuario Final solo diligencia asunto/descripción
+    -- al crear el ticket; la clasificación la asigna después un Técnico o
+    -- el Administrador (ver TicketsService.update).
+    category_id         INTEGER REFERENCES ticket_categories(id),
+    subcategory_id      INTEGER REFERENCES ticket_subcategories(id),
+    typification_id     INTEGER REFERENCES ticket_typifications(id),
 
     status_id           SMALLINT NOT NULL REFERENCES ticket_statuses(id),
     priority            VARCHAR(10) NOT NULL DEFAULT 'MEDIUM'
@@ -242,9 +246,7 @@ CREATE TABLE tickets (
     reopened_count       SMALLINT NOT NULL DEFAULT 0,
 
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-    CONSTRAINT chk_classification_active CHECK (category_id IS NOT NULL)
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_tickets_requester ON tickets(requester_id);
@@ -265,8 +267,8 @@ CREATE TABLE ticket_status_history (
     ticket_id       UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
     from_status_id  SMALLINT REFERENCES ticket_statuses(id),
     to_status_id    SMALLINT NOT NULL REFERENCES ticket_statuses(id),
-    changed_by      UUID NOT NULL REFERENCES users(id),
-    reason          VARCHAR(255),
+    changed_by      UUID REFERENCES users(id),          -- NULL = acción automática del sistema (ej. cierre a 24h)
+    reason          VARCHAR(255) NOT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

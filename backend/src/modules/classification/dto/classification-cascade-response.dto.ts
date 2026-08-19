@@ -7,7 +7,6 @@ export class TypificationOptionDto {
   id: number;
   name: string;
   defaultPriority: string;
-  slaHours?: number;
 }
 
 export class SubcategoryOptionDto {

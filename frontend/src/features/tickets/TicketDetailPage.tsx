@@ -9,6 +9,8 @@ import { AssignControl } from './components/AssignControl';
 import { CommentThread } from './components/CommentThread';
 import { HistoryTimeline } from './components/HistoryTimeline';
 import { AttachmentsPanel } from './components/AttachmentsPanel';
+import { ClassifyControl } from './components/ClassifyControl';
+import { PriorityControl } from './components/PriorityControl';
 import { useAuthStore } from '@app/store/authStore';
 import { reportsApi } from '@features/reports/api/reportsApi';
 import { Button } from '@shared/components/Button';
@@ -53,9 +55,9 @@ export function TicketDetailPage() {
             <p style={{ whiteSpace: 'pre-wrap' }}>{ticket.description}</p>
 
             <div className="form-row" style={{ marginTop: 16 }}>
-              <Field label="Categoría" value={ticket.category.name} />
-              <Field label="Subcategoría" value={ticket.subcategory.name} />
-              <Field label="Tipificación" value={ticket.typification.name} />
+              <Field label="Categoría" value={ticket.category?.name ?? 'Sin clasificar'} />
+              <Field label="Subcategoría" value={ticket.subcategory?.name ?? '—'} />
+              <Field label="Tipificación" value={ticket.typification?.name ?? '—'} />
             </div>
             <div className="form-row">
               <Field label="Solicitante" value={ticket.requester.fullName} />
@@ -74,7 +76,21 @@ export function TicketDetailPage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {(canManage || ticket.status.isFinal || ticket.status.code === 'RESOLVED') && (
+          {canManage && (
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Clasificación</h3>
+              <ClassifyControl ticket={ticket} />
+            </div>
+          )}
+
+          {canManage && (
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Prioridad</h3>
+              <PriorityControl ticket={ticket} />
+            </div>
+          )}
+
+          {(canManage || ticket.status.code === 'RESOLVED') && (
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Acciones</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

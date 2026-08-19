@@ -20,12 +20,13 @@ export class TicketStatusHistory {
   @JoinColumn({ name: 'to_status_id' })
   toStatus: TicketStatus;
 
-  @ManyToOne(() => User)
+  // Nulo = acción automática del sistema (ej. cierre a 24h de estar Resuelto).
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'changed_by' })
-  changedBy: User;
+  changedBy?: User;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  reason?: string;
+  @Column({ type: 'varchar', length: 255 })
+  reason: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

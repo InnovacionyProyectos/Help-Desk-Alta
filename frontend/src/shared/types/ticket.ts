@@ -37,9 +37,11 @@ export interface Ticket {
   ticketNumber: string;
   subject: string;
   description: string;
-  category: { id: number; name: string };
-  subcategory: { id: number; name: string };
-  typification: { id: number; name: string };
+  // Opcionales: el Usuario Final crea el ticket sin clasificar; Admin/Técnico
+  // la asigna después (ver ClassifyControl).
+  category?: { id: number; name: string };
+  subcategory?: { id: number; name: string };
+  typification?: { id: number; name: string };
   status: { id: number; code: TicketStatusCode; name: string; isFinal: boolean };
   priority: TicketPriority;
   requester: UserSummary;

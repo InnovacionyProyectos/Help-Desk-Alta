@@ -21,29 +21,56 @@ export function StatusChangeControl({ ticket }: { ticket: Ticket }) {
   const queryClient = useQueryClient();
   const [toStatus, setToStatus] = useState<TicketStatusCode | ''>('');
   const [reason, setReason] = useState('');
+  const [showReasonError, setShowReasonError] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: (payload: { toStatus: TicketStatusCode; reason?: string }) =>
+    mutationFn: (payload: { toStatus: TicketStatusCode; reason: string }) =>
       ticketsApi.changeStatus(ticket.id, payload.toStatus, payload.reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets', 'detail', ticket.id] });
       queryClient.invalidateQueries({ queryKey: ['tickets', 'history', ticket.id] });
       setToStatus('');
       setReason('');
+      setShowReasonError(false);
     },
   });
 
-  // Usuario Final: única acción permitida es reabrir un ticket resuelto/cerrado.
+  const reasonTrimmed = reason.trim();
+
+  const submit = (status: TicketStatusCode) => {
+    if (!reasonTrimmed) {
+      setShowReasonError(true);
+      return;
+    }
+    mutation.mutate({ toStatus: status, reason: reasonTrimmed });
+  };
+
+  // CLOSED es terminal de verdad: nadie (ni Admin) puede cambiar el estado
+  // de un ticket cerrado. El backend ya lo rechaza; esto es solo para no
+  // mostrar controles que igual fallarían.
+  if (ticket.status.code === 'CLOSED') {
+    return <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Este ticket está cerrado y no puede cambiar de estado.</p>;
+  }
+
+  // Usuario Final: única acción permitida es reabrir un ticket resuelto,
+  // y también debe justificar el motivo.
   if (role === 'END_USER') {
-    if (!ticket.status.isFinal && ticket.status.code !== 'RESOLVED') return null;
+    if (ticket.status.code !== 'RESOLVED') return null;
     return (
-      <Button
-        variant="secondary"
-        loading={mutation.isPending}
-        onClick={() => mutation.mutate({ toStatus: 'REOPENED' })}
-      >
-        Reabrir ticket
-      </Button>
+      <div>
+        <TextField
+          label="Motivo de la reapertura"
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setShowReasonError(false);
+          }}
+          error={showReasonError ? 'El motivo es obligatorio' : undefined}
+        />
+        <Button variant="secondary" loading={mutation.isPending} onClick={() => submit('REOPENED')}>
+          Reabrir ticket
+        </Button>
+      </div>
     );
   }
 
@@ -54,7 +81,10 @@ export function StatusChangeControl({ ticket }: { ticket: Ticket }) {
       <SelectField
         label="Cambiar estado"
         value={toStatus}
-        onChange={(e) => setToStatus(e.target.value as TicketStatusCode | '')}
+        onChange={(e) => {
+          setToStatus(e.target.value as TicketStatusCode | '');
+          setShowReasonError(false);
+        }}
       >
         <option value="">Seleccione...</option>
         {options.map((s) => (
@@ -67,15 +97,15 @@ export function StatusChangeControl({ ticket }: { ticket: Ticket }) {
       {toStatus && (
         <>
           <TextField
-            label="Motivo (opcional)"
+            label="Motivo"
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              setShowReasonError(false);
+            }}
+            error={showReasonError ? 'El motivo es obligatorio' : undefined}
           />
-          <Button
-            loading={mutation.isPending}
-            disabled={!toStatus}
-            onClick={() => toStatus && mutation.mutate({ toStatus, reason: reason || undefined })}
-          >
+          <Button loading={mutation.isPending} onClick={() => submit(toStatus)}>
             Confirmar cambio
           </Button>
         </>

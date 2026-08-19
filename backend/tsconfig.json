@@ -14,6 +14,10 @@
     "skipLibCheck": true,
     "strict": true,
     "strictNullChecks": true,
+    // Las entidades de TypeORM declaran propiedades sin inicializador porque
+    // el ORM las asigna al hidratar filas de la BD, no el constructor; con
+    // strictPropertyInitialization activo, TypeScript las marca como error.
+    "strictPropertyInitialization": false,
     "noImplicitAny": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
