@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+**/dist/
+**/build/
+.next/
+out/
+
+# Environment variables (nunca versionar secretos/credenciales reales)
+.env
+.env.*
+!.env.example
+!*.env.example
+
+# Adjuntos subidos en local (STORAGE_LOCAL_PATH)
+uploads/
+backend/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Vite
+frontend/.vite/
+
+# Nest
+backend/dist/
+
+# Misc temp
+*.tmp
+.cache/
