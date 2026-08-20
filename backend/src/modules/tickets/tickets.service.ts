@@ -276,6 +276,18 @@ export class TicketsService {
       }),
     );
 
+    // El motivo también queda como comentario (además del historial) porque
+    // el timeline es compacto y difícil de leer; el hilo de comentarios da
+    // más espacio para revisar la traza de qué pasó con el ticket.
+    await this.commentsRepo.save(
+      this.commentsRepo.create({
+        ticket: { id } as any,
+        author: { id: actor.id } as any,
+        body: `Cambio de estado: ${fromStatus.name} → ${toStatus.name}\nMotivo: ${dto.reason}`,
+        isInternal: false,
+      }),
+    );
+
     await this.auditService.record({
       userId: actor.id,
       action: 'CHANGE_STATUS',

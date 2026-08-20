@@ -26,10 +26,13 @@ export class DashboardService {
       .groupBy('t.priority')
       .getRawMany();
 
+    // resolvedAt >= createdAt descarta datos inconsistentes (p.ej. resolved_at
+    // editado manualmente para pruebas) que arrastrarían el promedio a negativo.
     const avgResolutionHours = await this.ticketsRepo
       .createQueryBuilder('t')
       .select('AVG(EXTRACT(EPOCH FROM (t.resolvedAt - t.createdAt)) / 3600)', 'avgHours')
       .where('t.resolvedAt IS NOT NULL')
+      .andWhere('t.resolvedAt >= t.createdAt')
       .getRawOne();
 
     return { byStatus, byPriority, avgResolutionHours: avgResolutionHours?.avgHours ?? null };

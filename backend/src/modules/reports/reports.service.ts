@@ -179,7 +179,9 @@ export class ReportsService {
 
     const byStatus = groupAndCount(tickets, (t) => STATUS_LABELS[t.status.code]);
     const byPriority = groupAndCount(tickets, (t) => PRIORITY_LABELS[t.priority]);
-    const resolved = tickets.filter((t) => t.resolvedAt);
+    // resolvedAt >= createdAt descarta datos inconsistentes (p.ej. resolved_at
+    // editado manualmente para pruebas) que arrastrarían el promedio a negativo.
+    const resolved = tickets.filter((t) => t.resolvedAt && t.resolvedAt >= t.createdAt);
     const avgResolutionHours = resolved.length
       ? resolved.reduce((sum, t) => sum + (t.resolvedAt!.getTime() - t.createdAt.getTime()), 0) /
         resolved.length /

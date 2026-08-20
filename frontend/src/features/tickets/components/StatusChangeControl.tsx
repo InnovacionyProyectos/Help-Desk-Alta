@@ -29,6 +29,7 @@ export function StatusChangeControl({ ticket }: { ticket: Ticket }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets', 'detail', ticket.id] });
       queryClient.invalidateQueries({ queryKey: ['tickets', 'history', ticket.id] });
+      queryClient.invalidateQueries({ queryKey: ['tickets', 'comments', ticket.id] });
       setToStatus('');
       setReason('');
       setShowReasonError(false);
