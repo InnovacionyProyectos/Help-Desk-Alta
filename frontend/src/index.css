@@ -11,7 +11,7 @@
   --color-warning: #d97706;
 
   --status-open: #2563eb;
-  --status-assigned: #7c3aed;
+  --status-assigned: #a21caf;
   --status-in_progress: #d97706;
   --status-on_hold: #64748b;
   --status-resolved: #16a34a;
@@ -22,6 +22,10 @@
   --priority-medium: #2563eb;
   --priority-high: #d97706;
   --priority-critical: #dc2626;
+
+  --type-incidente: #dc2626;
+  --type-requerimiento: #2563eb;
+  --type-consulta: #64748b;
 
   --radius: 8px;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
@@ -555,6 +559,19 @@ textarea.input:focus {
 
 @media (max-width: 900px) {
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .chart-grid {
     grid-template-columns: 1fr;
   }
 }

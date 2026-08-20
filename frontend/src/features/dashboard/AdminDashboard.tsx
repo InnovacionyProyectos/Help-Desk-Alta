@@ -1,7 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from './api/dashboardApi';
-import { TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from '@shared/types/ticket';
+import { TICKET_STATUS_LABELS, TICKET_TYPE_LABELS, TicketStatusCode, TicketType } from '@shared/types/ticket';
 import { Spinner } from '@shared/components/Spinner';
+import { ChartCard } from '@shared/components/ChartCard';
+import { DonutChart } from '@shared/components/DonutChart';
+import { BarChart } from '@shared/components/BarChart';
+
+// Mismos colores que StatusBadge/TicketTypeBadge (var(--status-*)/var(--type-*)
+// en index.css) para que la identidad visual sea consistente entre el gráfico
+// y las etiquetas que se ven en el detalle/listado de tickets.
+const STATUS_COLORS: Record<TicketStatusCode, string> = {
+  OPEN: 'var(--status-open)',
+  ASSIGNED: 'var(--status-assigned)',
+  IN_PROGRESS: 'var(--status-in_progress)',
+  ON_HOLD: 'var(--status-on_hold)',
+  RESOLVED: 'var(--status-resolved)',
+  CLOSED: 'var(--status-closed)',
+  REOPENED: 'var(--status-reopened)',
+};
+
+const TYPE_COLORS: Record<TicketType, string> = {
+  INCIDENTE: 'var(--type-incidente)',
+  REQUERIMIENTO: 'var(--type-requerimiento)',
+  CONSULTA: 'var(--type-consulta)',
+};
 
 export function AdminDashboard() {
   const { data, isLoading } = useQuery({
@@ -35,53 +57,41 @@ export function AdminDashboard() {
           ))}
       </div>
 
-      <div className="detail-grid">
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Distribución por estado</h3>
-          <BarBreakdown
+      <div className="chart-grid">
+        <ChartCard title="Tickets por Área" subtitle="Volumen agrupado por área">
+          <BarChart
+            color="var(--color-primary)"
+            items={data.byArea.map((a) => ({ label: a.area, value: Number(a.total) }))}
+          />
+        </ChartCard>
+
+        <ChartCard title="Tickets por Tipo" subtitle="Distribución por tipología">
+          <DonutChart
+            items={data.byType.map((t) => ({
+              label: TICKET_TYPE_LABELS[t.ticketType],
+              value: Number(t.total),
+              color: TYPE_COLORS[t.ticketType],
+            }))}
+          />
+        </ChartCard>
+
+        <ChartCard title="Tickets por Estado" subtitle="Distribución según el estado actual del ticket">
+          <DonutChart
             items={data.byStatus.map((s) => ({
               label: TICKET_STATUS_LABELS[s.status],
               value: Number(s.total),
+              color: STATUS_COLORS[s.status],
             }))}
           />
-        </div>
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Distribución por prioridad</h3>
-          <BarBreakdown
-            items={data.byPriority.map((p) => ({
-              label: TICKET_PRIORITY_LABELS[p.priority],
-              value: Number(p.total),
-            }))}
+        </ChartCard>
+
+        <ChartCard title="Entradas por Categoría" subtitle="Distribución del consolidado general por categoría">
+          <BarChart
+            color="var(--color-success)"
+            items={data.byCategory.map((c) => ({ label: c.category, value: Number(c.total) }))}
           />
-        </div>
+        </ChartCard>
       </div>
     </>
-  );
-}
-
-function BarBreakdown({ items }: { items: { label: string; value: number }[] }) {
-  const max = Math.max(1, ...items.map((i) => i.value));
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {items.map((item) => (
-        <div key={item.label}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-          <div style={{ background: 'var(--color-bg)', borderRadius: 4, height: 8 }}>
-            <div
-              style={{
-                width: `${(item.value / max) * 100}%`,
-                background: 'var(--color-primary)',
-                height: 8,
-                borderRadius: 4,
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }

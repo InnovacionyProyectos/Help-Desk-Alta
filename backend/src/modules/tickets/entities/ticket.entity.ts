@@ -15,6 +15,7 @@ import { TicketSubcategory } from '@modules/classification/entities/ticket-subca
 import { TicketTypification } from '@modules/classification/entities/ticket-typification.entity';
 import { TicketStatus } from './ticket-status.entity';
 import { TicketPriority } from '../enums/ticket-priority.enum';
+import { TicketType } from '../enums/ticket-type.enum';
 
 @Entity('tickets')
 export class Ticket {
@@ -52,6 +53,11 @@ export class Ticket {
 
   @Column({ type: 'varchar', length: 10, default: TicketPriority.MEDIUM })
   priority: TicketPriority;
+
+  // Solo Admin/Técnico lo asignan/modifican (ver TicketsService.update,
+  // gateado por @Roles('ADMIN','TECHNICIAN') en el controller).
+  @Column({ name: 'ticket_type', type: 'varchar', length: 20, default: TicketType.INCIDENTE })
+  ticketType: TicketType;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'requester_id' })

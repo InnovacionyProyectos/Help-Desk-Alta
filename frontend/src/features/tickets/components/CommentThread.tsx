@@ -10,7 +10,7 @@ import { Spinner } from '@shared/components/Spinner';
 import { useAuthStore } from '@app/store/authStore';
 import { StagedFileList } from './StagedFileList';
 
-export function CommentThread({ ticketId }: { ticketId: string }) {
+export function CommentThread({ ticketId, disabled }: { ticketId: string; disabled?: boolean }) {
   const role = useAuthStore((state) => state.user?.role);
   const canPostInternal = role === 'ADMIN' || role === 'TECHNICIAN';
   const queryClient = useQueryClient();
@@ -68,37 +68,45 @@ export function CommentThread({ ticketId }: { ticketId: string }) {
         </div>
       )}
 
-      <TextAreaField
-        label="Agregar comentario"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Escriba su comentario..."
-      />
-
-      <Dropzone onFilesAccepted={(files) => setPendingFiles((prev) => [...prev, ...files])} />
-      <StagedFileList
-        files={pendingFiles}
-        onRemove={(index) => setPendingFiles((prev) => prev.filter((_, i) => i !== index))}
-      />
-
-      {canPostInternal && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13 }}>
-          <input
-            type="checkbox"
-            checked={isInternal}
-            onChange={(e) => setIsInternal(e.target.checked)}
+      {disabled ? (
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+          Este ticket está cerrado y no admite nuevos comentarios.
+        </p>
+      ) : (
+        <>
+          <TextAreaField
+            label="Agregar comentario"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Escriba su comentario..."
           />
-          Nota interna (solo visible para Admin/Técnico)
-        </label>
-      )}
 
-      <Button
-        loading={mutation.isPending}
-        disabled={body.trim().length === 0}
-        onClick={() => mutation.mutate()}
-      >
-        Comentar
-      </Button>
+          <Dropzone onFilesAccepted={(files) => setPendingFiles((prev) => [...prev, ...files])} />
+          <StagedFileList
+            files={pendingFiles}
+            onRemove={(index) => setPendingFiles((prev) => prev.filter((_, i) => i !== index))}
+          />
+
+          {canPostInternal && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={isInternal}
+                onChange={(e) => setIsInternal(e.target.checked)}
+              />
+              Nota interna (solo visible para Admin/Técnico)
+            </label>
+          )}
+
+          <Button
+            loading={mutation.isPending}
+            disabled={body.trim().length === 0}
+            onClick={() => mutation.mutate()}
+          >
+            Comentar
+          </Button>
+        </>
+      )}
     </div>
   );
 }

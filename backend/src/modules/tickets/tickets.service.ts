@@ -137,6 +137,7 @@ export class TicketsService {
 
     if (query.status) qb.andWhere('status.code = :statusCode', { statusCode: query.status });
     if (query.priority) qb.andWhere('ticket.priority = :priority', { priority: query.priority });
+    if (query.ticketType) qb.andWhere('ticket.ticketType = :ticketType', { ticketType: query.ticketType });
     scope?.(qb);
 
     const [data, total] = await qb.getManyAndCount();
@@ -169,8 +170,19 @@ export class TicketsService {
     }
   }
 
+  // CLOSED es terminal: una vez cerrado, ningún dato del ticket puede
+  // cambiar (clasificación, prioridad, tipo, asignación, comentarios,
+  // adjuntos), sin excepción de rol. changeStatus() ya bloquea reabrirlo
+  // por su cuenta; este helper cubre el resto de operaciones de escritura.
+  private assertTicketNotClosed(ticket: Ticket): void {
+    if (ticket.status.code === TicketStatusCode.CLOSED) {
+      throw new ForbiddenException('El ticket está cerrado y no se puede modificar');
+    }
+  }
+
   async update(id: string, dto: UpdateTicketDto): Promise<Ticket> {
     const ticket = await this.findOneOrFail(id);
+    this.assertTicketNotClosed(ticket);
 
     if (dto.categoryId && dto.subcategoryId && dto.typificationId) {
       await this.classificationService.validateChain(
@@ -186,12 +198,14 @@ export class TicketsService {
     if (dto.subject) ticket.subject = dto.subject;
     if (dto.description) ticket.description = dto.description;
     if (dto.priority) ticket.priority = dto.priority;
+    if (dto.ticketType) ticket.ticketType = dto.ticketType;
 
     return this.ticketsRepo.save(ticket);
   }
 
   async assign(id: string, dto: AssignTicketDto, assignedBy: AuthenticatedUser): Promise<Ticket> {
     const ticket = await this.findOneOrFail(id);
+    this.assertTicketNotClosed(ticket);
     const assignedStatus = await this.statusRepo.findOneOrFail({
       where: { code: TicketStatusCode.ASSIGNED },
     });
@@ -397,7 +411,8 @@ export class TicketsService {
     dto: CreateCommentDto,
     author: AuthenticatedUser,
   ): Promise<TicketComment> {
-    await this.findOneOrFail(ticketId, author);
+    const ticket = await this.findOneOrFail(ticketId, author);
+    this.assertTicketNotClosed(ticket);
 
     // Un Usuario Final nunca puede publicar comentarios internos.
     const isInternal = author.role === 'END_USER' ? false : (dto.isInternal ?? false);

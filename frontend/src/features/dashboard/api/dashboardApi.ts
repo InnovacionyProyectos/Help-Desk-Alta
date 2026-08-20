@@ -1,9 +1,12 @@
 import { httpClient } from '@shared/api/httpClient';
-import { Ticket, TicketPriority, TicketStatusCode } from '@shared/types/ticket';
+import { Ticket, TicketPriority, TicketStatusCode, TicketType } from '@shared/types/ticket';
 
 export interface AdminMetrics {
   byStatus: { status: TicketStatusCode; total: string }[];
   byPriority: { priority: TicketPriority; total: string }[];
+  byType: { ticketType: TicketType; total: string }[];
+  byCategory: { category: string; total: string }[];
+  byArea: { area: string; total: string }[];
   avgResolutionHours: string | null;
 }
 

@@ -7,6 +7,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { TicketAttachment } from '@modules/tickets/entities/ticket-attachment.entity';
 import { TicketsService } from '@modules/tickets/tickets.service';
+import { TicketStatusCode } from '@modules/tickets/enums/ticket-status.enum';
 import { AuthenticatedUser } from '@modules/auth/types/authenticated-user.type';
 
 @Injectable()
@@ -30,7 +31,10 @@ export class AttachmentsService {
   ): Promise<TicketAttachment> {
     // findOneOrFail ya lanza 403 si un Usuario Final intenta subir a un
     // ticket que no es suyo (mismo chequeo centralizado que usa TicketsService).
-    await this.ticketsService.findOneOrFail(ticketId, uploader);
+    const ticket = await this.ticketsService.findOneOrFail(ticketId, uploader);
+    if (ticket.status.code === TicketStatusCode.CLOSED) {
+      throw new ForbiddenException('El ticket está cerrado y no se puede modificar');
+    }
 
     const ticketDir = join(this.storageRoot, 'tickets', ticketId);
     await mkdir(ticketDir, { recursive: true });

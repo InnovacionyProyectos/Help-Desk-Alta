@@ -1,0 +1,5 @@
+export enum TicketType {
+  INCIDENTE = 'INCIDENTE',
+  REQUERIMIENTO = 'REQUERIMIENTO',
+  CONSULTA = 'CONSULTA',
+}

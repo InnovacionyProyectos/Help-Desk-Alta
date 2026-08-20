@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ticketsApi } from './api/ticketsApi';
 import { StatusBadge } from '@shared/components/StatusBadge';
 import { PriorityBadge } from '@shared/components/PriorityBadge';
+import { TicketTypeBadge } from '@shared/components/TicketTypeBadge';
 import { Spinner } from '@shared/components/Spinner';
 import { StatusChangeControl } from './components/StatusChangeControl';
 import { AssignControl } from './components/AssignControl';
@@ -11,6 +12,7 @@ import { HistoryTimeline } from './components/HistoryTimeline';
 import { AttachmentsPanel } from './components/AttachmentsPanel';
 import { ClassifyControl } from './components/ClassifyControl';
 import { PriorityControl } from './components/PriorityControl';
+import { TicketTypeControl } from './components/TicketTypeControl';
 import { useAuthStore } from '@app/store/authStore';
 import { reportsApi } from '@features/reports/api/reportsApi';
 import { Button } from '@shared/components/Button';
@@ -28,6 +30,7 @@ export function TicketDetailPage() {
   if (isLoading || !ticket) return <Spinner />;
 
   const canManage = role === 'ADMIN' || role === 'TECHNICIAN';
+  const isClosed = ticket.status.code === 'CLOSED';
 
   return (
     <>
@@ -39,6 +42,7 @@ export function TicketDetailPage() {
           <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
             <StatusBadge code={ticket.status.code} />
             <PriorityBadge priority={ticket.priority} />
+            <TicketTypeBadge ticketType={ticket.ticketType} />
           </div>
         </div>
         {canManage && (
@@ -67,23 +71,30 @@ export function TicketDetailPage() {
           </div>
 
           <div className="card">
-            <AttachmentsPanel ticketId={ticket.id} />
+            <AttachmentsPanel ticketId={ticket.id} disabled={isClosed} />
           </div>
 
           <div className="card">
-            <CommentThread ticketId={ticket.id} />
+            <CommentThread ticketId={ticket.id} disabled={isClosed} />
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {canManage && (
+          {canManage && !isClosed && (
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Tipo</h3>
+              <TicketTypeControl ticket={ticket} />
+            </div>
+          )}
+
+          {canManage && !isClosed && (
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Clasificación</h3>
               <ClassifyControl ticket={ticket} />
             </div>
           )}
 
-          {canManage && (
+          {canManage && !isClosed && (
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Prioridad</h3>
               <PriorityControl ticket={ticket} />
@@ -95,7 +106,7 @@ export function TicketDetailPage() {
               <h3 style={{ marginTop: 0 }}>Acciones</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <StatusChangeControl ticket={ticket} />
-                {canManage && <AssignControl ticket={ticket} />}
+                {canManage && !isClosed && <AssignControl ticket={ticket} />}
               </div>
             </div>
           )}

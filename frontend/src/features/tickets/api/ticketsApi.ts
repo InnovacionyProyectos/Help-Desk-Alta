@@ -6,6 +6,7 @@ import {
   TicketHistoryEvent,
   TicketPriority,
   TicketStatusCode,
+  TicketType,
 } from '@shared/types/ticket';
 
 export interface CreateTicketPayload {
@@ -28,6 +29,7 @@ export interface ClassificationPayload {
 export interface TicketListFilters {
   status?: TicketStatusCode;
   priority?: TicketPriority;
+  ticketType?: TicketType;
   page?: number;
   limit?: number;
 }
@@ -62,6 +64,9 @@ export const ticketsApi = {
 
   updatePriority: (id: string, priority: TicketPriority) =>
     httpClient.patch<Ticket>(`/tickets/${id}`, { priority }).then((r) => r.data),
+
+  updateTicketType: (id: string, ticketType: TicketType) =>
+    httpClient.patch<Ticket>(`/tickets/${id}`, { ticketType }).then((r) => r.data),
 
   addComment: (id: string, body: string, isInternal: boolean) =>
     httpClient

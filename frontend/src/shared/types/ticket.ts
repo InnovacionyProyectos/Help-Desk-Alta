@@ -9,6 +9,8 @@ export type TicketStatusCode =
 
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
+export type TicketType = 'INCIDENTE' | 'REQUERIMIENTO' | 'CONSULTA';
+
 export const TICKET_STATUS_LABELS: Record<TicketStatusCode, string> = {
   OPEN: 'Abierto',
   ASSIGNED: 'Asignado',
@@ -24,6 +26,12 @@ export const TICKET_PRIORITY_LABELS: Record<TicketPriority, string> = {
   MEDIUM: 'Media',
   HIGH: 'Alta',
   CRITICAL: 'Crítica',
+};
+
+export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
+  INCIDENTE: 'Incidente',
+  REQUERIMIENTO: 'Requerimiento',
+  CONSULTA: 'Consulta',
 };
 
 export interface UserSummary {
@@ -44,6 +52,7 @@ export interface Ticket {
   typification?: { id: number; name: string };
   status: { id: number; code: TicketStatusCode; name: string; isFinal: boolean };
   priority: TicketPriority;
+  ticketType: TicketType;
   requester: UserSummary;
   assignedTo?: UserSummary;
   createdAt: string;

@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ticketsApi, TicketListScope } from './api/ticketsApi';
-import { TicketPriority, TicketStatusCode, TICKET_PRIORITY_LABELS, TICKET_STATUS_LABELS } from '@shared/types/ticket';
+import {
+  TicketPriority,
+  TicketStatusCode,
+  TicketType,
+  TICKET_PRIORITY_LABELS,
+  TICKET_STATUS_LABELS,
+  TICKET_TYPE_LABELS,
+} from '@shared/types/ticket';
 import { StatusBadge } from '@shared/components/StatusBadge';
 import { PriorityBadge } from '@shared/components/PriorityBadge';
+import { TicketTypeBadge } from '@shared/components/TicketTypeBadge';
 import { SelectField } from '@shared/components/FormField';
 import { Spinner } from '@shared/components/Spinner';
 import { EmptyState } from '@shared/components/EmptyState';
@@ -21,6 +29,7 @@ const STATUS_OPTIONS: TicketStatusCode[] = [
   'REOPENED',
 ];
 const PRIORITY_OPTIONS: TicketPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+const TYPE_OPTIONS: TicketType[] = ['INCIDENTE', 'REQUERIMIENTO', 'CONSULTA'];
 
 export function TicketsListPage() {
   const navigate = useNavigate();
@@ -30,14 +39,16 @@ export function TicketsListPage() {
   const [scope, setScope] = useState<TicketListScope>(role === 'END_USER' ? 'mine' : 'all');
   const [status, setStatus] = useState<TicketStatusCode | ''>('');
   const [priority, setPriority] = useState<TicketPriority | ''>('');
+  const [ticketType, setTicketType] = useState<TicketType | ''>('');
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['tickets', scope, status, priority, page],
+    queryKey: ['tickets', scope, status, priority, ticketType, page],
     queryFn: () =>
       ticketsApi.list(scope, {
         status: status || undefined,
         priority: priority || undefined,
+        ticketType: ticketType || undefined,
         page,
         limit: 20,
       }),
@@ -95,6 +106,22 @@ export function TicketsListPage() {
             </option>
           ))}
         </SelectField>
+
+        <SelectField
+          label="Tipo"
+          value={ticketType}
+          onChange={(e) => {
+            setTicketType(e.target.value as TicketType | '');
+            setPage(1);
+          }}
+        >
+          <option value="">Todos</option>
+          {TYPE_OPTIONS.map((t) => (
+            <option key={t} value={t}>
+              {TICKET_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </SelectField>
       </div>
 
       <div className="card">
@@ -111,6 +138,7 @@ export function TicketsListPage() {
                   <th>Asunto</th>
                   <th>Solicitante</th>
                   <th>Asignado</th>
+                  <th>Tipo</th>
                   <th>Prioridad</th>
                   <th>Estado</th>
                   <th>Creado</th>
@@ -123,6 +151,9 @@ export function TicketsListPage() {
                     <td>{ticket.subject}</td>
                     <td>{ticket.requester.fullName}</td>
                     <td>{ticket.assignedTo?.fullName ?? '—'}</td>
+                    <td>
+                      <TicketTypeBadge ticketType={ticket.ticketType} />
+                    </td>
                     <td>
                       <PriorityBadge priority={ticket.priority} />
                     </td>
