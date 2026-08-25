@@ -26,7 +26,10 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <div className="app-sidebar__brand">Help Desk</div>
+        <div className="app-sidebar__brand">
+          <span className="app-sidebar__brand-mark">alta</span>
+          <span className="app-sidebar__brand-sub">Help Desk</span>
+        </div>
         {items.map((item) => (
           <NavLink
             key={item.to}

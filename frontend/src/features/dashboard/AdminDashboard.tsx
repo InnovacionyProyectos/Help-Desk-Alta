@@ -3,8 +3,10 @@ import { dashboardApi } from './api/dashboardApi';
 import { TICKET_STATUS_LABELS, TICKET_TYPE_LABELS, TicketStatusCode, TicketType } from '@shared/types/ticket';
 import { Spinner } from '@shared/components/Spinner';
 import { ChartCard } from '@shared/components/ChartCard';
-import { DonutChart } from '@shared/components/DonutChart';
-import { BarChart } from '@shared/components/BarChart';
+import { HorizontalBarChart } from '@shared/components/HorizontalBarChart';
+import { WaffleChart } from '@shared/components/WaffleChart';
+import { SegmentedMeter } from '@shared/components/SegmentedMeter';
+import { Treemap } from '@shared/components/Treemap';
 
 // Mismos colores que StatusBadge/TicketTypeBadge (var(--status-*)/var(--type-*)
 // en index.css) para que la identidad visual sea consistente entre el gráfico
@@ -24,6 +26,11 @@ const TYPE_COLORS: Record<TicketType, string> = {
   REQUERIMIENTO: 'var(--type-requerimiento)',
   CONSULTA: 'var(--type-consulta)',
 };
+
+// Paleta categórica de 8 tonos (azul de marca + 7 validados por contraste
+// y daltonismo) para el treemap de Categoría, cuyos nombres son dinámicos
+// y no tienen un color semántico propio como sí lo tienen estado/tipo.
+const CATEGORY_COLORS = ['#0e4bf5', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 
 export function AdminDashboard() {
   const { data, isLoading } = useQuery({
@@ -59,14 +66,14 @@ export function AdminDashboard() {
 
       <div className="chart-grid">
         <ChartCard title="Tickets por Área" subtitle="Volumen agrupado por área">
-          <BarChart
+          <HorizontalBarChart
             color="var(--color-primary)"
             items={data.byArea.map((a) => ({ label: a.area, value: Number(a.total) }))}
           />
         </ChartCard>
 
         <ChartCard title="Tickets por Tipo" subtitle="Distribución por tipología">
-          <DonutChart
+          <WaffleChart
             items={data.byType.map((t) => ({
               label: TICKET_TYPE_LABELS[t.ticketType],
               value: Number(t.total),
@@ -76,7 +83,7 @@ export function AdminDashboard() {
         </ChartCard>
 
         <ChartCard title="Tickets por Estado" subtitle="Distribución según el estado actual del ticket">
-          <DonutChart
+          <SegmentedMeter
             items={data.byStatus.map((s) => ({
               label: TICKET_STATUS_LABELS[s.status],
               value: Number(s.total),
@@ -86,9 +93,12 @@ export function AdminDashboard() {
         </ChartCard>
 
         <ChartCard title="Entradas por Categoría" subtitle="Distribución del consolidado general por categoría">
-          <BarChart
-            color="var(--color-success)"
-            items={data.byCategory.map((c) => ({ label: c.category, value: Number(c.total) }))}
+          <Treemap
+            items={data.byCategory.map((c, i) => ({
+              label: c.category,
+              value: Number(c.total),
+              color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+            }))}
           />
         </ChartCard>
       </div>

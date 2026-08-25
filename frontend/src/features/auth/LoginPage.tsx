@@ -47,7 +47,10 @@ export function LoginPage() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
-        <h1>Help Desk</h1>
+        <div className="auth-card__brand">
+          <span className="auth-card__brand-mark">alta</span>
+          <span className="auth-card__brand-sub">Help Desk</span>
+        </div>
         <p className="auth-card__subtitle">Ingrese con su correo corporativo</p>
 
         {serverError && <div className="auth-error">{serverError}</div>}
