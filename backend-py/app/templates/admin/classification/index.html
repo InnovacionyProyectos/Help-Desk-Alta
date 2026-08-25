@@ -1,0 +1,17 @@
+{% extends "layout/base.html" %}
+{% block title %}Clasificación · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Clasificación de tickets</h1>
+  <a class="btn btn--primary" href="/admin/classification/categories/new">+ Categoría</a>
+</div>
+
+<div class="card">
+  {% if not categories %}
+  <div class="empty-state">No hay categorías registradas.</div>
+  {% endif %}
+  {% for category in categories %}
+    {% include "admin/classification/_category_node.html" %}
+  {% endfor %}
+</div>
+{% endblock %}

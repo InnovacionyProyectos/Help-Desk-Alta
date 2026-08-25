@@ -1,0 +1,32 @@
+{% extends "layout/base.html" %}
+{% block title %}{% if mode == 'edit' %}Editar subcategoría{% else %}Nueva subcategoría{% endif %} · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if mode == 'edit' %}Editar subcategoría{% else %}Nueva subcategoría{% endif %}</h1>
+</div>
+<p style="color: var(--color-text-muted); font-size: 13px; margin-top: -8px;">Categoría: <strong>{{ category.name }}</strong></p>
+<div class="card" style="max-width: 480px;">
+  <form method="post" action="{% if mode == 'edit' %}/admin/classification/subcategories/{{ subcategory.id }}{% else %}/admin/classification/categories/{{ category.id }}/subcategories{% endif %}">
+    <div class="form-field">
+      <label for="name">Nombre</label>
+      <input class="input" type="text" id="name" name="name" maxlength="100" required value="{{ subcategory.name if subcategory else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="code">Código</label>
+      <input class="input" type="text" id="code" name="code" maxlength="20" value="{{ subcategory.code if subcategory and subcategory.code else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="description">Descripción</label>
+      <input class="input" type="text" id="description" name="description" maxlength="255" value="{{ subcategory.description if subcategory and subcategory.description else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="display_order">Orden</label>
+      <input class="input" type="number" id="display_order" name="display_order" min="0" value="{{ subcategory.display_order if subcategory else 0 }}">
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn--primary" type="submit">Guardar</button>
+      <a class="btn btn--secondary" href="/admin/classification">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

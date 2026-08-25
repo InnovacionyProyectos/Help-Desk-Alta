@@ -1,0 +1,31 @@
+{% extends "layout/base.html" %}
+{% block title %}{% if mode == 'edit' %}Editar categoría{% else %}Nueva categoría{% endif %} · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if mode == 'edit' %}Editar categoría{% else %}Nueva categoría{% endif %}</h1>
+</div>
+<div class="card" style="max-width: 480px;">
+  <form method="post" action="{% if mode == 'edit' %}/admin/classification/categories/{{ category.id }}{% else %}/admin/classification/categories{% endif %}">
+    <div class="form-field">
+      <label for="name">Nombre</label>
+      <input class="input" type="text" id="name" name="name" maxlength="100" required value="{{ category.name if category else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="code">Código</label>
+      <input class="input" type="text" id="code" name="code" maxlength="20" value="{{ category.code if category and category.code else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="description">Descripción</label>
+      <input class="input" type="text" id="description" name="description" maxlength="255" value="{{ category.description if category and category.description else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="display_order">Orden</label>
+      <input class="input" type="number" id="display_order" name="display_order" min="0" value="{{ category.display_order if category else 0 }}">
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn--primary" type="submit">Guardar</button>
+      <a class="btn btn--secondary" href="/admin/classification">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "layout/base.html" %}
+{% block title %}{% if mode == 'edit' %}Editar tipificación{% else %}Nueva tipificación{% endif %} · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>{% if mode == 'edit' %}Editar tipificación{% else %}Nueva tipificación{% endif %}</h1>
+</div>
+<p style="color: var(--color-text-muted); font-size: 13px; margin-top: -8px;">Subcategoría: <strong>{{ subcategory.name }}</strong></p>
+<div class="card" style="max-width: 480px;">
+  <form method="post" action="{% if mode == 'edit' %}/admin/classification/typifications/{{ typification.id }}{% else %}/admin/classification/subcategories/{{ subcategory.id }}/typifications{% endif %}">
+    <div class="form-field">
+      <label for="name">Nombre</label>
+      <input class="input" type="text" id="name" name="name" maxlength="100" required value="{{ typification.name if typification else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="code">Código</label>
+      <input class="input" type="text" id="code" name="code" maxlength="20" value="{{ typification.code if typification and typification.code else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="description">Descripción</label>
+      <input class="input" type="text" id="description" name="description" maxlength="255" value="{{ typification.description if typification and typification.description else '' }}">
+    </div>
+    <div class="form-field">
+      <label for="default_priority">Prioridad por defecto</label>
+      {% set current_priority = typification.default_priority if typification else 'MEDIUM' %}
+      <select class="select" id="default_priority" name="default_priority">
+        {% for p in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] %}
+        <option value="{{ p }}" {% if p == current_priority %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="display_order">Orden</label>
+      <input class="input" type="number" id="display_order" name="display_order" min="0" value="{{ typification.display_order if typification else 0 }}">
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn--primary" type="submit">Guardar</button>
+      <a class="btn btn--secondary" href="/admin/classification">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

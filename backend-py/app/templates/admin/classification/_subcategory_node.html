@@ -1,0 +1,30 @@
+<div class="tree-node" id="subcategory-{{ subcategory.id }}">
+  <details>
+    <summary class="tree-node__row">
+      <span class="tree-node__label">
+        {{ subcategory.name }}
+        {% if subcategory.code %}<span class="badge-muted">{{ subcategory.code }}</span>{% endif %}
+        {% if not subcategory.is_active %}<span class="badge-muted">Inactiva</span>{% endif %}
+      </span>
+      <span class="tree-node__actions" onclick="event.stopPropagation()">
+        <a class="link-btn" href="/admin/classification/subcategories/{{ subcategory.id }}/typifications/new">+ Tipificación</a>
+        <a class="link-btn" href="/admin/classification/subcategories/{{ subcategory.id }}/edit">Editar</a>
+        <button
+          type="button"
+          class="link-btn{% if subcategory.is_active %} link-btn--danger{% endif %}"
+          hx-post="/admin/classification/subcategories/{{ subcategory.id }}/toggle-active"
+          hx-target="closest .tree-node"
+          hx-swap="outerHTML"
+        >{% if subcategory.is_active %}Desactivar{% else %}Activar{% endif %}</button>
+      </span>
+    </summary>
+    <div class="tree-node__children">
+      {% if not subcategory.typifications %}
+      <div class="empty-state" style="padding: 12px;">Sin tipificaciones.</div>
+      {% endif %}
+      {% for typification in subcategory.typifications %}
+        {% include "admin/classification/_typification_node.html" %}
+      {% endfor %}
+    </div>
+  </details>
+</div>

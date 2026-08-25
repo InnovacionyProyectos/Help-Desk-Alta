@@ -1,0 +1,30 @@
+<div class="tree-node" id="category-{{ category.id }}">
+  <details>
+    <summary class="tree-node__row">
+      <span class="tree-node__label">
+        {{ category.name }}
+        {% if category.code %}<span class="badge-muted">{{ category.code }}</span>{% endif %}
+        {% if not category.is_active %}<span class="badge-muted">Inactiva</span>{% endif %}
+      </span>
+      <span class="tree-node__actions" onclick="event.stopPropagation()">
+        <a class="link-btn" href="/admin/classification/categories/{{ category.id }}/subcategories/new">+ Subcategoría</a>
+        <a class="link-btn" href="/admin/classification/categories/{{ category.id }}/edit">Editar</a>
+        <button
+          type="button"
+          class="link-btn{% if category.is_active %} link-btn--danger{% endif %}"
+          hx-post="/admin/classification/categories/{{ category.id }}/toggle-active"
+          hx-target="closest .tree-node"
+          hx-swap="outerHTML"
+        >{% if category.is_active %}Desactivar{% else %}Activar{% endif %}</button>
+      </span>
+    </summary>
+    <div class="tree-node__children">
+      {% if not category.subcategories %}
+      <div class="empty-state" style="padding: 12px;">Sin subcategorías.</div>
+      {% endif %}
+      {% for subcategory in category.subcategories %}
+        {% include "admin/classification/_subcategory_node.html" %}
+      {% endfor %}
+    </div>
+  </details>
+</div>
