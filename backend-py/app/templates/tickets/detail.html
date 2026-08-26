@@ -1,0 +1,23 @@
+{% extends "layout/base.html" %}
+{% block title %}{{ ticket.ticket_number }} · Alta Help Desk{% endblock %}
+{% block content %}
+<div id="ticket-header" class="card" style="margin-bottom:20px;">
+  {% include "tickets/_header_inner.html" %}
+</div>
+
+<div class="detail-grid">
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    {% include "tickets/_comments_card.html" %}
+    {% include "tickets/_attachments_card.html" %}
+    {% include "tickets/_history_card.html" %}
+  </div>
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    {% if is_staff %}
+      {% include "tickets/_type_card.html" %}
+      {% include "tickets/_classification_card.html" %}
+      {% include "tickets/_priority_card.html" %}
+    {% endif %}
+    {% include "tickets/_actions_card.html" %}
+  </div>
+</div>
+{% endblock %}

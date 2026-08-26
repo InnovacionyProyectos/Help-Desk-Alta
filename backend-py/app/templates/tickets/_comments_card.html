@@ -1,0 +1,41 @@
+<div
+  class="card"
+  id="card-comments"
+  hx-trigger="ticket-updated from:body"
+  hx-get="/tickets/{{ ticket.id }}/fragments/comments"
+  hx-target="#card-comments"
+  hx-swap="outerHTML"
+>
+  <h3 style="margin-top:0;">Comentarios</h3>
+  <div class="comment-thread" style="margin-bottom:16px;">
+    {% if not comments %}
+    <div class="empty-state">Sin comentarios todavía.</div>
+    {% endif %}
+    {% for c in comments %}
+    <div class="comment{% if c.is_internal %} comment--internal{% endif %}">
+      <div class="comment__meta">
+        <span>{{ c.author.full_name }}{% if c.is_internal %} · Nota interna{% endif %}</span>
+        <span>{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      </div>
+      <div style="white-space: pre-wrap;">{{ c.body }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if is_closed %}
+  <p style="color: var(--color-text-muted); font-size: 13px;">El ticket está cerrado; no se pueden agregar comentarios.</p>
+  {% else %}
+  <form hx-post="/tickets/{{ ticket.id }}/comments" hx-target="#card-comments" hx-swap="outerHTML">
+    <div class="form-field">
+      <textarea class="input" name="body" rows="3" required placeholder="Escriba un comentario..."></textarea>
+    </div>
+    {% if is_staff %}
+    <div class="form-field" style="flex-direction: row; align-items:center; gap:8px;">
+      <input type="checkbox" id="is_internal" name="is_internal" value="1">
+      <label for="is_internal" style="margin:0;">Nota interna (no visible para el Usuario Final)</label>
+    </div>
+    {% endif %}
+    <button class="btn btn--secondary" type="submit">Comentar</button>
+  </form>
+  {% endif %}
+</div>

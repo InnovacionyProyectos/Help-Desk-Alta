@@ -1,0 +1,22 @@
+<div class="page-header">
+  <div>
+    <h1 style="margin-bottom: 4px;">{{ ticket.ticket_number }} · {{ ticket.subject }}</h1>
+    <span style="color: var(--color-text-muted); font-size: 13px;">
+      Creado por {{ ticket.requester.full_name }} el {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}
+      {% if ticket.assigned_area %} · Área: {{ ticket.assigned_area.name }}{% endif %}
+      {% if ticket.assigned_to %} · Asignado a {{ ticket.assigned_to.full_name }}{% endif %}
+    </span>
+  </div>
+  <div style="display:flex; gap:6px; align-items:center;">
+    {% include "tickets/_type_badge.html" %}
+    {% include "tickets/_priority_badge.html" %}
+    {% include "tickets/_status_badge.html" %}
+    {% if is_staff %}
+    <a class="btn btn--secondary" href="/reports/tickets/{{ ticket.id }}/pdf" style="margin-left:8px;">Descargar PDF</a>
+    {% endif %}
+  </div>
+</div>
+<p style="white-space: pre-wrap;">{{ ticket.description }}</p>
+{% if ticket.reopened_count > 0 %}
+<p style="color: var(--color-text-muted); font-size: 12px;">Reabierto {{ ticket.reopened_count }} vez{{ 'es' if ticket.reopened_count != 1 else '' }}.</p>
+{% endif %}

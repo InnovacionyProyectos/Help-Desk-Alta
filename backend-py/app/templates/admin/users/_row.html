@@ -1,0 +1,35 @@
+<tr id="user-row-{{ target.id }}">
+  <td>{{ target.full_name }}</td>
+  <td>{{ target.email }}</td>
+  <td>{{ target.role.name }}</td>
+  <td>{{ target.area.name if target.area else '—' }}</td>
+  <td>
+    <span class="badge" style="background-color: {% if target.is_active %}var(--color-success){% else %}var(--color-text-muted){% endif %}">
+      {{ 'Activo' if target.is_active else 'Inactivo' }}
+    </span>
+    {% if target.is_locked %}
+    <span class="badge" style="background-color: var(--color-danger); margin-left: 6px;">Bloqueado</span>
+    {% endif %}
+  </td>
+  <td>
+    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+      <a class="link-btn" href="/admin/users/{{ target.id }}/edit">Editar</a>
+      <button
+        type="button"
+        class="link-btn{% if target.is_active %} link-btn--danger{% endif %}"
+        hx-post="/admin/users/{{ target.id }}/toggle-active"
+        hx-target="#user-row-{{ target.id }}"
+        hx-swap="outerHTML"
+      >{% if target.is_active %}Desactivar{% else %}Activar{% endif %}</button>
+      {% if target.is_locked %}
+      <button
+        type="button"
+        class="link-btn"
+        hx-post="/admin/users/{{ target.id }}/unlock"
+        hx-target="#user-row-{{ target.id }}"
+        hx-swap="outerHTML"
+      >Desbloquear</button>
+      {% endif %}
+    </div>
+  </td>
+</tr>

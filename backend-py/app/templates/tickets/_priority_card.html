@@ -1,0 +1,18 @@
+<div class="card" id="card-priority">
+  <h3 style="margin-top:0;">Prioridad</h3>
+  {% if is_closed %}
+  {% include "tickets/_priority_badge.html" %}
+  <p style="color: var(--color-text-muted); font-size: 12px; margin-top:8px;">El ticket está cerrado; no se puede modificar.</p>
+  {% else %}
+  <form hx-post="/tickets/{{ ticket.id }}/priority" hx-target="#card-priority" hx-swap="outerHTML">
+    <div class="form-field">
+      <select class="select" name="priority">
+        {% for code, label in priority_labels.items() %}
+        <option value="{{ code }}" {% if ticket.priority == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn--secondary" type="submit">Guardar</button>
+  </form>
+  {% endif %}
+</div>

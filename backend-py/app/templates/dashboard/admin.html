@@ -1,0 +1,141 @@
+{% extends "layout/base.html" %}
+{% block title %}Panel · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Panel</h1>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <p class="stat-card__label">Total de tickets</p>
+    <p class="stat-card__value">{{ total_tickets }}</p>
+  </div>
+  <div class="stat-card">
+    <p class="stat-card__label">Tiempo prom. de resolución</p>
+    <p class="stat-card__value">{{ avg_hours }}h</p>
+  </div>
+  {% for card in highlight_cards %}
+  <div class="stat-card">
+    <p class="stat-card__label">{{ card.label }}</p>
+    <p class="stat-card__value">{{ card.value }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="chart-grid">
+
+  {# ---------- Tickets por Área (HorizontalBarChart) ---------- #}
+  <div class="card" style="display:flex; flex-direction:column;">
+    <h3 style="margin:0; color: var(--color-primary); font-size:16px; font-weight:700;">Tickets por Área</h3>
+    <p style="margin:2px 0 20px; font-size:13px; color: var(--color-text-muted);">Volumen agrupado por área</p>
+    <div style="flex:1; display:flex; align-items:center;">
+      <div style="width:100%;">
+        {% if not by_area_chart %}
+        <p style="font-size:13px; color: var(--color-text-muted);">Sin datos</p>
+        {% else %}
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          {% for item in by_area_chart %}
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span title="{{ item.label }}" style="width:130px; flex-shrink:0; font-size:13px; color: var(--color-text-muted); text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ item.label }}</span>
+            <div style="flex:1; height:22px; background: var(--color-bg); border-radius:999px;">
+              <div style="width:{{ item.pct }}%; height:100%; min-width:6px; border-radius:999px; background: linear-gradient(90deg, color-mix(in srgb, {{ item.color }} 55%, white), {{ item.color }});"></div>
+            </div>
+            <strong style="width:34px; flex-shrink:0; font-size:14px; font-weight:700; color: {{ item.color }};">{{ item.value }}</strong>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Tickets por Tipo (WaffleChart) ---------- #}
+  <div class="card" style="display:flex; flex-direction:column;">
+    <h3 style="margin:0; color: var(--color-primary); font-size:16px; font-weight:700;">Tickets por Tipo</h3>
+    <p style="margin:2px 0 20px; font-size:13px; color: var(--color-text-muted);">Distribución por tipología</p>
+    <div style="flex:1; display:flex; align-items:center;">
+      <div style="width:100%;">
+        {% if not by_type_chart %}
+        <p style="font-size:13px; color: var(--color-text-muted);">Sin datos</p>
+        {% else %}
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <div style="display:grid; grid-template-columns: repeat(10, 1fr); gap:3px; max-width:220px; margin:0 auto;">
+            {% for color in by_type_chart.cells %}
+            <div style="aspect-ratio:1; border-radius:2px; background: {{ color }};"></div>
+            {% endfor %}
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            {% for item in by_type_chart.legend %}
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="width:12px; height:12px; border-radius:3px; background: {{ item.color }}; flex-shrink:0;"></span>
+              <span style="flex:1; font-size:14px; font-weight:500; color: var(--color-text);">{{ item.label }}</span>
+              <strong style="font-size:18px; font-weight:700; color: {{ item.color }};">{{ item.value }}</strong>
+              <span style="width:40px; text-align:right; font-size:12px; color: var(--color-text-muted);">{{ item.pct }}%</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Tickets por Estado (SegmentedMeter) ---------- #}
+  <div class="card" style="display:flex; flex-direction:column;">
+    <h3 style="margin:0; color: var(--color-primary); font-size:16px; font-weight:700;">Tickets por Estado</h3>
+    <p style="margin:2px 0 20px; font-size:13px; color: var(--color-text-muted);">Distribución según el estado actual del ticket</p>
+    <div style="flex:1; display:flex; align-items:center;">
+      <div style="width:100%;">
+        {% if not by_status_chart %}
+        <p style="font-size:13px; color: var(--color-text-muted);">Sin datos</p>
+        {% else %}
+        <div>
+          <div style="display:flex; gap:3px; height:44px; border-radius:10px; overflow:hidden; background: var(--color-bg);">
+            {% for seg in by_status_chart.segments %}
+            <div title="{{ seg.label }}: {{ seg.value }}" style="flex: {{ seg.flex }}; min-width:4px; background: {{ seg.color }};"></div>
+            {% endfor %}
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-top:18px;">
+            {% for item in by_status_chart.legend %}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="width:10px; height:10px; border-radius:50%; background: {{ item.color }}; flex-shrink:0;"></span>
+              <span style="font-size:13px; color: var(--color-text);">{{ item.label }}</span>
+              <strong style="font-size:15px; font-weight:700; color: {{ item.color }};">{{ item.value }}</strong>
+              <span style="font-size:12px; color: var(--color-text-muted);">({{ item.pct }}%)</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- Entradas por Categoría (Treemap) ---------- #}
+  <div class="card" style="display:flex; flex-direction:column;">
+    <h3 style="margin:0; color: var(--color-primary); font-size:16px; font-weight:700;">Entradas por Categoría</h3>
+    <p style="margin:2px 0 20px; font-size:13px; color: var(--color-text-muted);">Distribución del consolidado general por categoría</p>
+    <div style="flex:1; display:flex; align-items:center;">
+      <div style="width:100%;">
+        {% if not by_category_chart %}
+        <p style="font-size:13px; color: var(--color-text-muted);">Sin datos</p>
+        {% else %}
+        <div style="position:relative; width:100%; height:{{ treemap_height }}px;">
+          {% for r in by_category_chart %}
+          <div title="{{ r.label }}: {{ r.value }}" style="position:absolute; left:{{ r.x }}%; top:{{ r.y }}px; width:{{ r.w }}%; height:{{ r.h }}px; background: {{ r.color }}; border:2px solid var(--color-surface); box-sizing:border-box; padding:8px; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;">
+            {% if r.show_label %}
+            <span style="font-size:12px; font-weight:600; color: {{ r.text_color }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ r.label }}</span>
+            {% endif %}
+            {% if r.show_value %}
+            <span style="font-size:20px; font-weight:700; color: {{ r.text_color }}; line-height:1.2;">{{ r.value }}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+<div class="card" id="card-attachments">
+  <h3 style="margin-top:0;">Adjuntos</h3>
+  <div class="comment-thread" style="margin-bottom:16px;">
+    {% if not attachments %}
+    <div class="empty-state">Sin adjuntos todavía.</div>
+    {% endif %}
+    {% for a in attachments %}
+    <div class="comment">
+      <div class="comment__meta">
+        <span>{{ a.uploaded_by_user.full_name }} · {{ a.size_bytes | filesizeformat }}</span>
+        <span>{{ a.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      </div>
+      <div>
+        <a href="/attachments/{{ a.id }}/download">{{ a.file_name }}</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if is_closed %}
+  <p style="color: var(--color-text-muted); font-size: 13px;">El ticket está cerrado; no se pueden agregar adjuntos.</p>
+  {% else %}
+  <div class="form-field">
+    <input
+      class="input"
+      type="file"
+      name="file"
+      required
+      hx-post="/tickets/{{ ticket.id }}/attachments"
+      hx-trigger="change"
+      hx-target="#card-attachments"
+      hx-swap="outerHTML"
+      hx-encoding="multipart/form-data"
+    >
+  </div>
+  {% endif %}
+</div>

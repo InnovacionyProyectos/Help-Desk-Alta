@@ -1,0 +1,54 @@
+{% if is_staff or ticket.status.code == 'RESOLVED' %}
+<div class="card" id="card-actions">
+  <h3 style="margin-top:0;">Acciones</h3>
+
+  {% if is_staff and not is_closed %}
+  <div style="margin-bottom:20px;">
+    <h4 style="margin-bottom:8px; font-size:14px;">Asignar técnico</h4>
+    <form hx-post="/tickets/{{ ticket.id }}/assign" hx-target="#card-actions" hx-swap="outerHTML">
+      <div class="form-field">
+        <select class="select" name="technician_id" required>
+          <option value="">Seleccione un técnico</option>
+          {% for tech in technicians %}
+          <option value="{{ tech.id }}" {% if ticket.assigned_to_id == tech.id %}selected{% endif %}>{{ tech.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <input class="input" type="text" name="reason" maxlength="255" placeholder="Motivo (opcional)">
+      </div>
+      <button class="btn btn--secondary" type="submit">Asignar</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div>
+    <h4 style="margin-bottom:8px; font-size:14px;">Cambiar estado</h4>
+    {% if is_closed %}
+    <p style="color: var(--color-text-muted); font-size: 13px;">El ticket está cerrado; no puede cambiar de estado.</p>
+    {% elif is_staff %}
+    <form hx-post="/tickets/{{ ticket.id }}/status" hx-target="#card-actions" hx-swap="outerHTML">
+      <div class="form-field">
+        <select class="select" name="to_status" required>
+          {% for s in statuses %}
+          <option value="{{ s.code }}" {% if ticket.status.code == s.code %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <input class="input" type="text" name="reason" maxlength="255" required placeholder="Motivo del cambio">
+      </div>
+      <button class="btn btn--primary" type="submit">Cambiar estado</button>
+    </form>
+    {% else %}
+    <form hx-post="/tickets/{{ ticket.id }}/status" hx-target="#card-actions" hx-swap="outerHTML">
+      <input type="hidden" name="to_status" value="REOPENED">
+      <div class="form-field">
+        <input class="input" type="text" name="reason" maxlength="255" required placeholder="Motivo de la reapertura">
+      </div>
+      <button class="btn btn--primary" type="submit">Reabrir ticket</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

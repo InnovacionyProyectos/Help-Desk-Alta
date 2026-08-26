@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession as DbSession
 
 from app.config import settings
 from app.database import get_db
+from app.security.rate_limit import limiter
 from app.security.sessions import create_session, revoke_session
 from app.services import auth_service
 from app.services.auth_exceptions import (
@@ -24,6 +25,7 @@ async def login_page(request: Request):
 
 
 @router.post("/login")
+@limiter.limit("5/minute")
 async def login_submit(
     request: Request,
     db: Annotated[DbSession, Depends(get_db)],

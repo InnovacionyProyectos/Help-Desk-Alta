@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession as DbSession
 from sqlalchemy.orm import selectinload
 
 from app.models.classification import TicketCategory, TicketSubcategory, TicketTypification
+from app.models.user import User
 from app.schemas.classification import CategoryOption, SubcategoryOption, TypificationOption
+from app.services import audit_service
 from app.services.classification_exceptions import (
     CategoryNotFoundError,
     InvalidClassificationChainError,
@@ -149,9 +151,18 @@ async def create_category(
     code: str | None = None,
     description: str | None = None,
     display_order: int = 0,
+    actor: User | None = None,
 ) -> TicketCategory:
     category = TicketCategory(name=name, code=code, description=description, display_order=display_order)
     db.add(category)
+    await db.flush()
+    await audit_service.record_create(
+        db,
+        actor,
+        entity="TicketCategory",
+        entity_id=category.id,
+        new_values={"name": name, "code": code, "description": description, "displayOrder": display_order},
+    )
     await db.commit()
     await db.refresh(category)
     return category
@@ -166,8 +177,16 @@ async def update_category(
     description: str | None = None,
     display_order: int | None = None,
     is_active: bool | None = None,
+    actor: User | None = None,
 ) -> TicketCategory:
     category = await get_category_or_fail(db, category_id)
+    old_values = {
+        "name": category.name,
+        "code": category.code,
+        "description": category.description,
+        "displayOrder": category.display_order,
+        "isActive": category.is_active,
+    }
     if name is not None:
         category.name = name
     if code is not None:
@@ -178,6 +197,20 @@ async def update_category(
         category.display_order = display_order
     if is_active is not None:
         category.is_active = is_active
+    await audit_service.record_update(
+        db,
+        actor,
+        entity="TicketCategory",
+        entity_id=category_id,
+        old_values=old_values,
+        new_values={
+            "name": category.name,
+            "code": category.code,
+            "description": category.description,
+            "displayOrder": category.display_order,
+            "isActive": category.is_active,
+        },
+    )
     await db.commit()
     await db.refresh(category)
     return category
@@ -229,6 +262,7 @@ async def create_subcategory(
     code: str | None = None,
     description: str | None = None,
     display_order: int = 0,
+    actor: User | None = None,
 ) -> TicketSubcategory:
     await get_category_or_fail(db, category_id)
     subcategory = TicketSubcategory(
@@ -239,6 +273,20 @@ async def create_subcategory(
         display_order=display_order,
     )
     db.add(subcategory)
+    await db.flush()
+    await audit_service.record_create(
+        db,
+        actor,
+        entity="TicketSubcategory",
+        entity_id=subcategory.id,
+        new_values={
+            "categoryId": category_id,
+            "name": name,
+            "code": code,
+            "description": description,
+            "displayOrder": display_order,
+        },
+    )
     await db.commit()
     await db.refresh(subcategory)
     return subcategory
@@ -254,8 +302,17 @@ async def update_subcategory(
     description: str | None = None,
     display_order: int | None = None,
     is_active: bool | None = None,
+    actor: User | None = None,
 ) -> TicketSubcategory:
     subcategory = await get_subcategory_or_fail(db, subcategory_id)
+    old_values = {
+        "categoryId": subcategory.category_id,
+        "name": subcategory.name,
+        "code": subcategory.code,
+        "description": subcategory.description,
+        "displayOrder": subcategory.display_order,
+        "isActive": subcategory.is_active,
+    }
     if category_id is not None:
         await get_category_or_fail(db, category_id)
         subcategory.category_id = category_id
@@ -269,6 +326,21 @@ async def update_subcategory(
         subcategory.display_order = display_order
     if is_active is not None:
         subcategory.is_active = is_active
+    await audit_service.record_update(
+        db,
+        actor,
+        entity="TicketSubcategory",
+        entity_id=subcategory_id,
+        old_values=old_values,
+        new_values={
+            "categoryId": subcategory.category_id,
+            "name": subcategory.name,
+            "code": subcategory.code,
+            "description": subcategory.description,
+            "displayOrder": subcategory.display_order,
+            "isActive": subcategory.is_active,
+        },
+    )
     await db.commit()
     await db.refresh(subcategory)
     return subcategory
@@ -307,6 +379,7 @@ async def create_typification(
     description: str | None = None,
     display_order: int = 0,
     default_priority: str = "MEDIUM",
+    actor: User | None = None,
 ) -> TicketTypification:
     await get_subcategory_or_fail(db, subcategory_id)
     typification = TicketTypification(
@@ -318,6 +391,21 @@ async def create_typification(
         default_priority=default_priority,
     )
     db.add(typification)
+    await db.flush()
+    await audit_service.record_create(
+        db,
+        actor,
+        entity="TicketTypification",
+        entity_id=typification.id,
+        new_values={
+            "subcategoryId": subcategory_id,
+            "name": name,
+            "code": code,
+            "description": description,
+            "displayOrder": display_order,
+            "defaultPriority": default_priority,
+        },
+    )
     await db.commit()
     await db.refresh(typification)
     return typification
@@ -334,8 +422,18 @@ async def update_typification(
     display_order: int | None = None,
     default_priority: str | None = None,
     is_active: bool | None = None,
+    actor: User | None = None,
 ) -> TicketTypification:
     typification = await get_typification_or_fail(db, typification_id)
+    old_values = {
+        "subcategoryId": typification.subcategory_id,
+        "name": typification.name,
+        "code": typification.code,
+        "description": typification.description,
+        "displayOrder": typification.display_order,
+        "defaultPriority": typification.default_priority,
+        "isActive": typification.is_active,
+    }
     if subcategory_id is not None:
         await get_subcategory_or_fail(db, subcategory_id)
         typification.subcategory_id = subcategory_id
@@ -351,6 +449,22 @@ async def update_typification(
         typification.default_priority = default_priority
     if is_active is not None:
         typification.is_active = is_active
+    await audit_service.record_update(
+        db,
+        actor,
+        entity="TicketTypification",
+        entity_id=typification_id,
+        old_values=old_values,
+        new_values={
+            "subcategoryId": typification.subcategory_id,
+            "name": typification.name,
+            "code": typification.code,
+            "description": typification.description,
+            "displayOrder": typification.display_order,
+            "defaultPriority": typification.default_priority,
+            "isActive": typification.is_active,
+        },
+    )
     await db.commit()
     await db.refresh(typification)
     return typification

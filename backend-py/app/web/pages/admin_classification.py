@@ -75,6 +75,7 @@ async def create_category_submit(
         code=code or None,
         description=description or None,
         display_order=display_order,
+        actor=user,
     )
     return RedirectResponse(url="/admin/classification", status_code=303)
 
@@ -110,6 +111,7 @@ async def update_category_submit(
             code=code or None,
             description=description or None,
             display_order=display_order,
+            actor=user,
         )
     except CategoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -161,6 +163,7 @@ async def create_subcategory_submit(
             code=code or None,
             description=description or None,
             display_order=display_order,
+            actor=user,
         )
     except CategoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -198,6 +201,7 @@ async def update_subcategory_submit(
             code=code or None,
             description=description or None,
             display_order=display_order,
+            actor=user,
         )
     except SubcategoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -253,6 +257,7 @@ async def create_typification_submit(
             description=description or None,
             display_order=display_order,
             default_priority=default_priority,
+            actor=user,
         )
     except SubcategoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -292,6 +297,7 @@ async def update_typification_submit(
             description=description or None,
             display_order=display_order,
             default_priority=default_priority,
+            actor=user,
         )
     except TypificationNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

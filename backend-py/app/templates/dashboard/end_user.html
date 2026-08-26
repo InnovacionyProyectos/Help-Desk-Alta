@@ -1,0 +1,13 @@
+{% extends "layout/base.html" %}
+{% block title %}Panel · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="page-header" style="margin-bottom:12px;">
+    <h3 style="margin:0;">Mis solicitudes activas ({{ active_tickets|length }})</h3>
+    <a class="btn btn--primary" href="/tickets/new">+ Nuevo Ticket</a>
+  </div>
+  {% with tickets = active_tickets, empty_label = "No tienes solicitudes activas" %}
+    {% include "dashboard/_ticket_mini_list.html" %}
+  {% endwith %}
+</div>
+{% endblock %}

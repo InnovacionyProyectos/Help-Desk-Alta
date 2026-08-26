@@ -1,0 +1,37 @@
+<div class="card" id="card-classification">
+  <h3 style="margin-top:0;">Clasificación</h3>
+  {% if is_closed %}
+  <p>
+    {% if ticket.category %}{{ ticket.category.name }} → {{ ticket.subcategory.name }} → {{ ticket.typification.name }}{% else %}Sin clasificar{% endif %}
+  </p>
+  <p style="color: var(--color-text-muted); font-size: 12px;">El ticket está cerrado; no se puede modificar.</p>
+  {% else %}
+  <form hx-post="/tickets/{{ ticket.id }}/classification" hx-target="#card-classification" hx-swap="outerHTML">
+    <div class="form-field">
+      <label for="reclass_category_id">Categoría</label>
+      <select class="select" id="reclass_category_id" name="category_id" required></select>
+    </div>
+    <div class="form-field">
+      <label for="reclass_subcategory_id">Subcategoría</label>
+      <select class="select" id="reclass_subcategory_id" name="subcategory_id" required disabled></select>
+    </div>
+    <div class="form-field">
+      <label for="reclass_typification_id">Tipificación</label>
+      <select class="select" id="reclass_typification_id" name="typification_id" required disabled></select>
+    </div>
+    <button class="btn btn--secondary" type="submit">Guardar</button>
+  </form>
+  <script src="/static/js/ticket-cascade.js"></script>
+  <script>
+    initTicketCascade(
+      {category: 'reclass_category_id', subcategory: 'reclass_subcategory_id', typification: 'reclass_typification_id'},
+      {{ cascade_json | safe }},
+      {
+        category_id: {{ (ticket.category_id or '') | tojson }},
+        subcategory_id: {{ (ticket.subcategory_id or '') | tojson }},
+        typification_id: {{ (ticket.typification_id or '') | tojson }}
+      }
+    );
+  </script>
+  {% endif %}
+</div>

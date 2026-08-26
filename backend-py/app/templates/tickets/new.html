@@ -1,0 +1,64 @@
+{% extends "layout/base.html" %}
+{% block title %}Nuevo ticket · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Nuevo ticket</h1>
+</div>
+
+<div class="card" style="max-width: 640px;">
+  {% if error %}
+  <div class="auth-error">{{ error }}</div>
+  {% endif %}
+  <form method="post" action="/tickets/new">
+    <div class="form-field">
+      <label for="subject">Asunto</label>
+      <input class="input" type="text" id="subject" name="subject" maxlength="200" required value="{{ values.subject or '' }}">
+    </div>
+    <div class="form-field">
+      <label for="description">Descripción</label>
+      <textarea class="input" id="description" name="description" rows="5" required>{{ values.description or '' }}</textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label for="category_id">Categoría</label>
+        <select class="select" id="category_id" name="category_id"></select>
+      </div>
+      <div class="form-field">
+        <label for="subcategory_id">Subcategoría</label>
+        <select class="select" id="subcategory_id" name="subcategory_id" disabled></select>
+      </div>
+      <div class="form-field">
+        <label for="typification_id">Tipificación</label>
+        <select class="select" id="typification_id" name="typification_id" disabled></select>
+      </div>
+    </div>
+    <p class="form-field__hint">Opcional: puede dejarse sin clasificar y hacerlo después desde el detalle del ticket.</p>
+
+    <div class="form-field">
+      <label for="priority">Prioridad</label>
+      <select class="select" id="priority" name="priority">
+        <option value="">Según tipificación (o Media si no se clasifica)</option>
+        {% for code, label in priority_labels.items() %}
+        <option value="{{ code }}" {% if values.priority == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button class="btn btn--primary btn--full" type="submit">Crear ticket</button>
+  </form>
+</div>
+
+<script src="/static/js/ticket-cascade.js"></script>
+<script>
+  initTicketCascade(
+    {category: 'category_id', subcategory: 'subcategory_id', typification: 'typification_id'},
+    {{ cascade_json | safe }},
+    {
+      category_id: {{ (values.category_id or '') | tojson }},
+      subcategory_id: {{ (values.subcategory_id or '') | tojson }},
+      typification_id: {{ (values.typification_id or '') | tojson }}
+    }
+  );
+</script>
+{% endblock %}

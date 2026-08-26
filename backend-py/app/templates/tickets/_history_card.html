@@ -1,0 +1,30 @@
+<div
+  class="card"
+  id="card-history"
+  hx-trigger="ticket-updated from:body"
+  hx-get="/tickets/{{ ticket.id }}/fragments/history"
+  hx-target="#card-history"
+  hx-swap="outerHTML"
+>
+  <h3 style="margin-top:0;">Historial</h3>
+  {% if not history %}
+  <div class="empty-state">Sin eventos registrados.</div>
+  {% else %}
+  <div class="timeline">
+    {% for item in history %}
+    <div class="timeline__item">
+      <div class="timeline__dot"></div>
+      <div class="timeline__body">
+        {% if item.type == 'STATUS_CHANGE' %}
+        <strong>{{ item.by }}</strong> cambió el estado {% if item.from %}de <strong>{{ item.from }}</strong> {% endif %}a <strong>{{ item.to }}</strong>.
+        {% else %}
+        <strong>{{ item.by }}</strong> asignó el ticket {% if item.from %}de <strong>{{ item.from }}</strong> {% endif %}a <strong>{{ item.to }}</strong>.
+        {% endif %}
+        {% if item.reason %}<br>Motivo: {{ item.reason }}{% endif %}
+        <br><span style="font-size:11px;">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

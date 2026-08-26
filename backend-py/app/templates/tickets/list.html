@@ -1,0 +1,96 @@
+{% extends "layout/base.html" %}
+{% block title %}Tickets · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Tickets</h1>
+  <a class="btn btn--primary" href="/tickets/new">+ Nuevo ticket</a>
+</div>
+
+<form method="get" action="/tickets" class="filters-bar">
+  {% if is_staff %}
+  <div class="form-field">
+    <label for="view">Vista</label>
+    <select class="select" id="view" name="view">
+      <option value="all" {% if view == 'all' %}selected{% endif %}>Todos</option>
+      <option value="assigned" {% if view == 'assigned' %}selected{% endif %}>Asignados a mí</option>
+      <option value="mine" {% if view == 'mine' %}selected{% endif %}>Creados por mí</option>
+    </select>
+  </div>
+  {% endif %}
+  <div class="form-field">
+    <label for="status">Estado</label>
+    <select class="select" id="status" name="status">
+      <option value="">Todos</option>
+      {% for s in statuses %}
+      <option value="{{ s.code }}" {% if filter_status == s.code %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-field">
+    <label for="priority">Prioridad</label>
+    <select class="select" id="priority" name="priority">
+      <option value="">Todas</option>
+      {% for code, label in priority_labels.items() %}
+      <option value="{{ code }}" {% if filter_priority == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-field">
+    <label for="ticket_type">Tipo</label>
+    <select class="select" id="ticket_type" name="ticket_type">
+      <option value="">Todos</option>
+      {% for code, label in type_labels.items() %}
+      <option value="{{ code }}" {% if filter_type == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-field" style="margin-bottom:0;">
+    <button class="btn btn--secondary" type="submit">Filtrar</button>
+  </div>
+</form>
+
+<div class="card">
+  {% if not tickets %}
+  <div class="empty-state">No hay tickets para mostrar.</div>
+  {% else %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ticket</th>
+        <th>Asunto</th>
+        <th>Solicitante</th>
+        <th>Asignado</th>
+        <th>Tipo</th>
+        <th>Prioridad</th>
+        <th>Estado</th>
+        <th>Creado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ticket in tickets %}
+      <tr onclick="window.location='/tickets/{{ ticket.id }}'">
+        <td>{{ ticket.ticket_number }}</td>
+        <td>{{ ticket.subject }}</td>
+        <td>{{ ticket.requester.full_name }}</td>
+        <td>{{ ticket.assigned_to.full_name if ticket.assigned_to else '—' }}</td>
+        <td>{% include "tickets/_type_badge.html" %}</td>
+        <td>{% include "tickets/_priority_badge.html" %}</td>
+        <td>{% include "tickets/_status_badge.html" %}</td>
+        <td>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="pagination">
+    <span>Página {{ page }} de {{ total_pages }} ({{ total }} ticket{{ 's' if total != 1 else '' }})</span>
+    {% if page > 1 %}
+    <a class="link-btn" href="?page={{ page - 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}">← Anterior</a>
+    {% endif %}
+    {% if page < total_pages %}
+    <a class="link-btn" href="?page={{ page + 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}">Siguiente →</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -16,6 +16,14 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
 
+    # Directorio raiz de adjuntos, relativo al cwd del proceso (ver run.py:
+    # se ejecuta con cwd=backend-py). Mismo nombre de variable y mismo valor
+    # por defecto que backend/.env (NestJS) para que, si algun dia ambos
+    # procesos comparten cwd, apunten al mismo arbol de archivos sin migrar
+    # nada — hoy resuelven a carpetas fisicas distintas porque corren desde
+    # directorios de trabajo distintos.
+    storage_local_path: str = "./uploads"
+
     @property
     def database_url(self) -> str:
         return (

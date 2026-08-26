@@ -1,0 +1,27 @@
+{# Puerto de TicketMiniList.tsx. Espera en el contexto: `tickets` (lista de
+   Ticket) y `empty_label` (str). `priority_labels` se hereda del contexto
+   padre (with context) — igual que _priority_badge.html en tickets/. #}
+{% if not tickets %}
+<div class="empty-state">{{ empty_label }}</div>
+{% else %}
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Ticket</th>
+      <th>Asunto</th>
+      <th>Prioridad</th>
+      <th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ticket in tickets %}
+    <tr onclick="window.location='/tickets/{{ ticket.id }}'">
+      <td>{{ ticket.ticket_number }}</td>
+      <td>{{ ticket.subject }}</td>
+      <td>{% include "tickets/_priority_badge.html" %}</td>
+      <td>{% include "tickets/_status_badge.html" %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

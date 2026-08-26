@@ -1,0 +1,18 @@
+<div class="card" id="card-type">
+  <h3 style="margin-top:0;">Tipo</h3>
+  {% if is_closed %}
+  {% include "tickets/_type_badge.html" %}
+  <p style="color: var(--color-text-muted); font-size: 12px; margin-top:8px;">El ticket está cerrado; no se puede modificar.</p>
+  {% else %}
+  <form hx-post="/tickets/{{ ticket.id }}/type" hx-target="#card-type" hx-swap="outerHTML">
+    <div class="form-field">
+      <select class="select" name="ticket_type">
+        {% for code, label in type_labels.items() %}
+        <option value="{{ code }}" {% if ticket.ticket_type == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn--secondary" type="submit">Guardar</button>
+  </form>
+  {% endif %}
+</div>
