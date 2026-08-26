@@ -20,7 +20,7 @@
   --status-in_progress: #d97706;
   --status-on_hold: #64748b;
   --status-resolved: #16a34a;
-  --status-closed: #334155;
+  --status-closed: #000000; /* Ink Black exacto del manual (antes #334155, un slate parecido) */
   --status-reopened: #dc2626;
 
   --priority-low: #64748b;
@@ -84,6 +84,17 @@ a {
   letter-spacing: -0.5px;
 }
 
+/* Logotipo real (SVG vectorial extraído del manual de marca, ver
+   layout/_brand_mark.html) — `height: 1em` lo escala en proporción al
+   font-size del contenedor (.app-sidebar__brand-mark / .auth-card__brand-mark,
+   26px/34px respectivamente), el ancho se ajusta solo respetando el
+   viewBox del SVG (mismo patrón que un <img> con solo `height` fijado). */
+.brand-mark {
+  display: block;
+  height: 1em;
+  width: auto;
+}
+
 .app-sidebar__brand-sub {
   font-size: 12px;
   font-weight: 500;
@@ -123,6 +134,25 @@ a {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
+}
+
+.app-topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Logotipo del topbar: mismo SVG que el sidebar/login (ver
+   layout/_brand_mark.html), pero más pequeño y semi-transparente para que
+   quede como un detalle sutil de marca junto al usuario, no un segundo
+   logo compitiendo con el de la barra lateral. */
+.app-topbar__brand {
+  display: block;
+  font-size: 18px;
+  color: var(--color-primary);
+  opacity: 0.5;
+  padding-right: 16px;
+  border-right: 1px solid var(--color-border);
 }
 
 .app-content {

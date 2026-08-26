@@ -5,6 +5,7 @@ para usar reportlab en vez de WeasyPrint (ver comentario ahí)."""
 
 import io
 from datetime import date
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -12,11 +13,21 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.exports.fonts import register_fonts
 from app.models.ticket import Ticket
 from app.services.reports_service import PRIORITY_LABELS, STATUS_LABELS
 
 PRIMARY = colors.HexColor("#0e4bf5")
 HEADER_BG = colors.HexColor("#f5f5f5")
+
+_CELL_STYLE = ParagraphStyle("SummaryCell", fontName="DMSans", fontSize=8, leading=10)
+
+
+def _cell(value: str) -> Paragraph:
+    """Ver la misma nota en pdf_ticket.py — una celda de Table con texto
+    plano no hace wrap en reportlab; con nombres/asuntos largos el texto se
+    sale de su columna y queda encima de la siguiente."""
+    return Paragraph(escape(str(value)), _CELL_STYLE)
 
 
 def _fmt_date(dt) -> str:
@@ -35,9 +46,14 @@ def build_summary_pdf(
     date_from: date | None,
     date_to: date | None,
 ) -> bytes:
+    register_fonts()
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=2 * cm, bottomMargin=2 * cm)
     styles = getSampleStyleSheet()
+    # Tipografía de marca — ver la misma nota en pdf_ticket.py.
+    styles["Normal"].fontName = "DMSans"
+    styles["Heading1"].fontName = "DMSans-Bold"
+    styles["Heading3"].fontName = "DMSans-Bold"
     title_style = ParagraphStyle("SummaryTitle", parent=styles["Heading1"], textColor=PRIMARY)
     subtitle_style = ParagraphStyle("SummarySubtitle", parent=styles["Normal"], textColor=colors.grey)
 
@@ -57,7 +73,8 @@ def build_summary_pdf(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), HEADER_BG),
-                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (0, -1), "DMSans-Bold"),
+                ("FONTNAME", (1, 0), (1, -1), "DMSans"),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 8),
                 ("LEFTPADDING", (0, 0), (-1, -1), 10),
@@ -101,16 +118,21 @@ def build_summary_pdf(
 
 
 def _styled_table(rows: list[list[str]], col_widths=None) -> Table:
-    table = Table(rows, colWidths=col_widths)
+    # rows[0] = encabezado (texto plano, corto); el resto se envuelve en
+    # Paragraph para que el wrap funcione con nombres/asuntos largos (ver
+    # _cell() arriba y la misma nota en pdf_ticket.py).
+    wrapped = [rows[0]] + [[_cell(value) for value in row] for row in rows[1:]]
+    table = Table(wrapped, colWidths=col_widths, repeatRows=1)
     table.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), PRIMARY),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("FONTNAME", (0, 0), (-1, 0), "DMSans-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 8),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
                 ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#d8d8d8")),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, HEADER_BG]),
             ]

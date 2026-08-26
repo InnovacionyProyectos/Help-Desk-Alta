@@ -38,10 +38,16 @@ STATUS_LABELS = {
 TYPE_LABELS = {"INCIDENTE": "Incidente", "REQUERIMIENTO": "Requerimiento", "CONSULTA": "Consulta"}
 PRIORITY_LABELS = {"LOW": "Baja", "MEDIUM": "Media", "HIGH": "Alta", "CRITICAL": "Crítica"}
 
-# Mismos colores que StatusBadge/TicketTypeBadge (var(--status-*)/
-# var(--type-*) en app.css) para que la identidad visual sea consistente
-# entre el gráfico y las etiquetas que se ven en el detalle/listado de
-# tickets — puerto literal de las constantes en AdminDashboard.tsx.
+# Mismos colores que StatusBadge (var(--status-*) en app.css) para que la
+# identidad visual sea consistente entre el gráfico y las etiquetas que se
+# ven en el detalle/listado de tickets. Deliberadamente NO se tocaron al
+# revisar el manual de marca (2026-08-26): son un sistema semántico de 7
+# estados (abierto/asignado/en progreso/en espera/resuelto/cerrado/
+# reabierto) que necesita colores muy distinguibles entre sí — el manual
+# solo define 5 colores de marca, insuficientes para 7 estados sin
+# duplicar o perder contraste, y el manual tampoco define una paleta de
+# estados. Único ajuste: CLOSED ahora es Ink Black exacto (antes un slate
+# oscuro parecido pero no el color de marca real).
 STATUS_COLORS = {
     "OPEN": "var(--status-open)",
     "ASSIGNED": "var(--status-assigned)",
@@ -51,15 +57,38 @@ STATUS_COLORS = {
     "CLOSED": "var(--status-closed)",
     "REOPENED": "var(--status-reopened)",
 }
+# Paleta de marca literal (Electric Blue / Ink Black / azul marino, un
+# tono derivado de Electric Blue) — deliberadamente INDEPENDIENTE de
+# var(--type-*), que sigue usando su propio esquema semántico (rojo para
+# Incidente, etc.) en las etiquetas TicketTypeBadge del listado/detalle de
+# tickets, sin tocar. Aquí sí se pudo ir 100% a colores de marca porque
+# los 3 tipos son categorías sin urgencia implícita (a diferencia del
+# estado) y el valor del gráfico se pinta como texto sobre fondo blanco:
+# se evitó Lime Pop/Cloud Grey porque su contraste contra blanco no pasa
+# WCAG AA para texto (~1.3:1), confirmado por cálculo antes de aplicarlos.
 TYPE_COLORS = {
-    "INCIDENTE": "var(--type-incidente)",
-    "REQUERIMIENTO": "var(--type-requerimiento)",
-    "CONSULTA": "var(--type-consulta)",
+    "INCIDENTE": "#000000",  # Ink Black
+    "REQUERIMIENTO": "#0e4bf5",  # Electric Blue
+    "CONSULTA": "#082d93",  # Electric Blue, sombra 40% (azul marino)
 }
 # Paleta categórica de 8 tonos para el treemap de Categoría, cuyos nombres
-# son dinámicos y no tienen un color semántico propio como sí lo tienen
-# estado/tipo — misma paleta fija que CATEGORY_COLORS en AdminDashboard.tsx.
-CATEGORY_COLORS = ["#0e4bf5", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+# son dinámicos y no tienen un color semántico propio. Antes eran 8 tonos
+# sueltos sin relación con la marca (naranja/verde/rosa/morado/rojo);
+# ahora son 8 variaciones derivadas matemáticamente (tinte/sombra) de los
+# 5 colores del manual — Electric Blue, Lime Pop, Ink Black y Cloud Grey.
+# Seguro incluso con colores muy claros/oscuros porque el texto de cada
+# celda no es fijo: build_treemap() calcula blanco/negro dinámicamente
+# según la luminancia WCAG real de cada color (ver charts/color.py).
+CATEGORY_COLORS = [
+    "#0e4bf5",  # Electric Blue
+    "#bef86f",  # Lime Pop
+    "#000000",  # Ink Black
+    "#082d93",  # Electric Blue, sombra 40% (azul marino)
+    "#7ca148",  # Lime Pop, sombra 35% (oliva)
+    "#628af8",  # Electric Blue, tinte 35% (celeste)
+    "#d8d8d8",  # Cloud Grey
+    "#7d99e5",  # Electric Blue mezclado con Cloud Grey (azul grisáceo)
+]
 
 
 @router.get("/dashboard")

@@ -12,7 +12,7 @@
     <div class="app-shell">
       <aside class="app-sidebar">
         <div class="app-sidebar__brand">
-          <span class="app-sidebar__brand-mark">alta</span>
+          <span class="app-sidebar__brand-mark">{% include "layout/_brand_mark.html" %}</span>
           <span class="app-sidebar__brand-sub">Help Desk</span>
         </div>
         <a class="app-sidebar__link{% if active_nav == 'dashboard' %} app-sidebar__link--active{% endif %}" href="/dashboard">Panel</a>
@@ -29,13 +29,16 @@
 
       <div class="app-main">
         <header class="app-topbar">
-          <div>
-            <strong>{{ current_user.full_name }}</strong>
-            <span style="color: var(--color-text-muted); margin-left: 8px; font-size: 13px;">
-              {% if current_user.role.code == 'ADMIN' %}Administrador
-              {% elif current_user.role.code == 'TECHNICIAN' %}Técnico
-              {% else %}Usuario Final{% endif %}
-            </span>
+          <div class="app-topbar__left">
+            <span class="app-topbar__brand">{% include "layout/_brand_mark.html" %}</span>
+            <div>
+              <strong>{{ current_user.full_name }}</strong>
+              <span style="color: var(--color-text-muted); margin-left: 8px; font-size: 13px;">
+                {% if current_user.role.code == 'ADMIN' %}Administrador
+                {% elif current_user.role.code == 'TECHNICIAN' %}Técnico
+                {% else %}Usuario Final{% endif %}
+              </span>
+            </div>
           </div>
           <form method="post" action="/logout">
             <button class="btn btn--secondary" type="submit">Cerrar sesión</button>

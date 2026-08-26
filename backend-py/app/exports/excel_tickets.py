@@ -10,6 +10,13 @@ from openpyxl.styles import Font
 from app.models.ticket import Ticket
 from app.services.reports_service import PRIORITY_LABELS, STATUS_LABELS
 
+# Tipografía de marca: a diferencia del PDF (reportlab embebe el .ttf, ver
+# app/exports/fonts.py), un .xlsx solo declara el NOMBRE de la fuente —
+# Excel la sustituye por una fuente local si "DM Sans" no está instalada
+# en el equipo que lo abre. Aun así es más correcto declararla que dejar
+# el Calibri por defecto de openpyxl, que no tiene relación con la marca.
+BRAND_FONT = "DM Sans"
+
 COLUMNS = [
     "Ticket#",
     "Asunto",
@@ -38,7 +45,7 @@ def build_tickets_excel(tickets: list[Ticket]) -> bytes:
 
     ws.append(COLUMNS)
     for cell in ws[1]:
-        cell.font = Font(bold=True)
+        cell.font = Font(name=BRAND_FONT, bold=True)
     ws.auto_filter.ref = "A1:M1"
 
     for t in tickets:
@@ -59,6 +66,9 @@ def build_tickets_excel(tickets: list[Ticket]) -> bytes:
                 _fmt_date(t.closed_at),
             ]
         )
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.font = Font(name=BRAND_FONT)
 
     buffer = io.BytesIO()
     wb.save(buffer)

@@ -22,6 +22,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from app.exports.fonts import register_fonts
 from app.models.attachment import TicketAttachment
 from app.models.ticket import Ticket, TicketComment
 from app.services.reports_service import PRIORITY_LABELS, STATUS_LABELS
@@ -30,7 +31,7 @@ PRIMARY = colors.HexColor("#0e4bf5")
 MUTED = colors.HexColor("#52514e")
 RULE = colors.HexColor("#d8d8d8")
 
-_CELL_STYLE = ParagraphStyle("TableCell", fontName="Helvetica", fontSize=8, leading=11)
+_CELL_STYLE = ParagraphStyle("TableCell", fontName="DMSans", fontSize=8, leading=11)
 
 
 def _fmt_date(dt) -> str:
@@ -64,7 +65,7 @@ def _section_table(rows: list[list[str]], col_widths: list[float]) -> Table:
     table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (-1, 0), "DMSans-Bold"),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("BACKGROUND", (0, 0), (-1, 0), PRIMARY),
                 ("FONTSIZE", (0, 0), (-1, 0), 9),
@@ -86,9 +87,18 @@ def build_ticket_pdf(
     comments: list[TicketComment],
     attachments: list[TicketAttachment],
 ) -> bytes:
+    register_fonts()
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=2 * cm, bottomMargin=2 * cm)
     styles = getSampleStyleSheet()
+    # Tipografía de marca: DM Sans en vez del Helvetica por defecto de
+    # reportlab (ver app/exports/fonts.py) — se sobreescribe sobre los
+    # estilos base para que todos los ParagraphStyle que heredan de estos
+    # (title_style, subtitle_style, body_style, etc. más abajo) tomen la
+    # fuente correcta sin repetirla en cada uno.
+    styles["Normal"].fontName = "DMSans"
+    styles["Heading1"].fontName = "DMSans-Bold"
+    styles["Heading3"].fontName = "DMSans-Bold"
     title_style = ParagraphStyle("TicketTitle", parent=styles["Heading1"], textColor=PRIMARY, spaceAfter=4)
     subtitle_style = ParagraphStyle("TicketSubtitle", parent=styles["Normal"], textColor=colors.grey)
     section_style = ParagraphStyle("TicketSection", parent=styles["Heading3"], spaceBefore=16, spaceAfter=6)
@@ -132,7 +142,7 @@ def build_ticket_pdf(
     detail_table.setStyle(
         TableStyle(
             [
-                ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+                ("FONTNAME", (0, 0), (0, -1), "DMSans-Bold"),
                 ("TEXTCOLOR", (0, 0), (0, -1), MUTED),
                 ("FONTSIZE", (0, 0), (0, -1), 9),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
