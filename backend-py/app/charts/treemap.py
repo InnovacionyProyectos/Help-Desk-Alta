@@ -56,5 +56,10 @@ def build_treemap(items: list[dict]) -> list[dict] | None:
     for rect in rects:
         rect["text_color"] = readable_text_color(rect["color"])
         rect["show_label"] = rect["w"] > 12 and rect["h"] > 30
-        rect["show_value"] = rect["w"] > 30 and rect["h"] > 50
+        # Pedido explícito del usuario: toda celda que alcanza a mostrar la
+        # etiqueta también debe mostrar el número — antes el original usaba
+        # un umbral más estricto solo para el número (w>30 y h>50), dejando
+        # celdas visibles con etiqueta pero sin valor. Deviación deliberada
+        # del puerto literal del Treemap.tsx original.
+        rect["show_value"] = rect["show_label"]
     return rects

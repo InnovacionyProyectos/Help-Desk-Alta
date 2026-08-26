@@ -16,6 +16,14 @@
           hx-target="closest .tree-node"
           hx-swap="outerHTML"
         >{% if subcategory.is_active %}Desactivar{% else %}Activar{% endif %}</button>
+        <button
+          type="button"
+          class="link-btn link-btn--danger"
+          hx-post="/admin/classification/subcategories/{{ subcategory.id }}/delete"
+          hx-target="closest .tree-node"
+          hx-swap="delete"
+          hx-confirm="¿Eliminar la subcategoría &quot;{{ subcategory.name }}&quot;? Esta acción no se puede deshacer. Solo es posible si no tiene tickets clasificados con ella."
+        >Eliminar</button>
       </span>
     </summary>
     <div class="tree-node__children">

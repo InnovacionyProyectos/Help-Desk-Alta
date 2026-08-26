@@ -14,6 +14,7 @@
   <td>
     <div style="display:flex; gap:4px; flex-wrap:wrap;">
       <a class="link-btn" href="/admin/users/{{ target.id }}/edit">Editar</a>
+      <a class="link-btn" href="/admin/users/{{ target.id }}/password">Cambiar contraseña</a>
       <button
         type="button"
         class="link-btn{% if target.is_active %} link-btn--danger{% endif %}"
@@ -29,6 +30,16 @@
         hx-target="#user-row-{{ target.id }}"
         hx-swap="outerHTML"
       >Desbloquear</button>
+      {% endif %}
+      {% if current_user and target.id != current_user.id and not (current_user.role.code == 'TECHNICIAN' and target.role.code == 'ADMIN') %}
+      <button
+        type="button"
+        class="link-btn link-btn--danger"
+        hx-post="/admin/users/{{ target.id }}/delete"
+        hx-target="#user-row-{{ target.id }}"
+        hx-swap="delete"
+        hx-confirm="¿Seguro que quieres eliminar a este usuario? Esta acción no se puede deshacer."
+      >Eliminar</button>
       {% endif %}
     </div>
   </td>

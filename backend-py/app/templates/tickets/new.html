@@ -19,6 +19,7 @@
       <textarea class="input" id="description" name="description" rows="5" required>{{ values.description or '' }}</textarea>
     </div>
 
+    {% if is_staff %}
     <div class="form-row">
       <div class="form-field">
         <label for="category_id">Categoría</label>
@@ -38,17 +39,19 @@
     <div class="form-field">
       <label for="priority">Prioridad</label>
       <select class="select" id="priority" name="priority">
-        <option value="">Según tipificación (o Media si no se clasifica)</option>
+        <option value="">Media (si no se indica)</option>
         {% for code, label in priority_labels.items() %}
         <option value="{{ code }}" {% if values.priority == code %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
     </div>
+    {% endif %}
 
     <button class="btn btn--primary btn--full" type="submit">Crear ticket</button>
   </form>
 </div>
 
+{% if is_staff %}
 <script src="/static/js/ticket-cascade.js"></script>
 <script>
   initTicketCascade(
@@ -61,4 +64,5 @@
     }
   );
 </script>
+{% endif %}
 {% endblock %}

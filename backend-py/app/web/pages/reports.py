@@ -1,11 +1,11 @@
-"""Rutas de Reportes — equivalente a reports.controller.ts, donde TODO el
-controller original es `@Roles('ADMIN')` a nivel de clase (incluida la
-ficha PDF de un ticket individual). Se replica igual aquí con
-`require_role("ADMIN")` en las 4 rutas — nota de paridad: el botón
-"Descargar PDF" del detalle de ticket (tickets.py) es visible para
-ADMIN/TECHNICIAN como en el React original, así que un TECHNICIAN que lo
-usa recibe 403 del backend; es el comportamiento real del sistema
-original, no un bug introducido en la reescritura."""
+"""Rutas de Reportes. El NestJS original tenía TODO el controller en
+`@Roles('ADMIN')` a nivel de clase (incluida la ficha PDF de un ticket
+individual) — desviación deliberada de esa paridad: por pedido explícito
+del usuario, Técnico ahora tiene los mismos permisos que Admin excepto
+Clasificación, así que las 4 rutas de Reportes son ADMIN+TECHNICIAN aquí
+(antes eran ADMIN-only, y antes de eso un TECHNICIAN recibía 403 al usar
+el botón "Descargar PDF" del detalle de ticket pese a que el botón le era
+visible — esa inconsistencia ya no existe)."""
 
 import uuid
 from datetime import date, datetime
@@ -22,7 +22,7 @@ from app.exports.pdf_ticket import build_ticket_pdf
 from app.models.area import Area
 from app.models.ticket import TicketStatus
 from app.security.deps import require_role
-from app.services import reports_service, ticket_service
+from app.services import attachments_service, reports_service, ticket_service
 from app.services.reports_service import STATUS_LABELS
 from app.services.ticket_exceptions import TicketNotFoundError
 from app.templating import templates
@@ -30,7 +30,7 @@ from app.templating import templates
 router = APIRouter()
 
 Db = Annotated[DbSession, Depends(get_db)]
-AdminOnly = Annotated[object, Depends(require_role("ADMIN"))]
+StaffOnly = Annotated[object, Depends(require_role("ADMIN", "TECHNICIAN"))]
 
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 PDF_MEDIA_TYPE = "application/pdf"
@@ -52,7 +52,7 @@ def _parse_filters(date_from: str, date_to: str, status: str, area_id: str):
 
 
 @router.get("/reports")
-async def reports_page(request: Request, user: AdminOnly, db: Db):
+async def reports_page(request: Request, user: StaffOnly, db: Db):
     statuses = list((await db.execute(select(TicketStatus).order_by(TicketStatus.display_order))).scalars())
     areas = list((await db.execute(select(Area).order_by(Area.name))).scalars())
     return templates.TemplateResponse(
@@ -70,7 +70,7 @@ async def reports_page(request: Request, user: AdminOnly, db: Db):
 
 @router.get("/reports/tickets.xlsx")
 async def download_excel(
-    user: AdminOnly,
+    user: StaffOnly,
     db: Db,
     date_from: Annotated[str, Query()] = "",
     date_to: Annotated[str, Query()] = "",
@@ -90,7 +90,7 @@ async def download_excel(
 
 @router.get("/reports/summary.pdf")
 async def download_summary_pdf(
-    user: AdminOnly,
+    user: StaffOnly,
     db: Db,
     date_from: Annotated[str, Query()] = "",
     date_to: Annotated[str, Query()] = "",
@@ -109,13 +109,21 @@ async def download_summary_pdf(
 
 
 @router.get("/reports/tickets/{ticket_id}/pdf")
-async def download_ticket_pdf(ticket_id: uuid.UUID, user: AdminOnly, db: Db):
+async def download_ticket_pdf(ticket_id: uuid.UUID, user: StaffOnly, db: Db):
+    """`actor=user` en las 3 llamadas: no es solo para el chequeo de
+    propiedad (irrelevante aquí, ADMIN/TECHNICIAN siempre pasan), sino
+    para que `list_comments` incluya los comentarios internos — el pedido
+    explícito del usuario es que el PDF sirva como respaldo completo de
+    auditoría, y Admin/Técnico ya ven esos comentarios en la pantalla."""
     try:
-        ticket = await ticket_service.get_one(db, ticket_id)
+        ticket = await ticket_service.get_one(db, ticket_id, actor=user)
+        history = await ticket_service.get_history(db, ticket_id, actor=user)
+        comments = await ticket_service.list_comments(db, ticket_id, actor=user)
     except TicketNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    attachments = await attachments_service.list_by_ticket(db, ticket_id, user)
 
-    content = build_ticket_pdf(ticket)
+    content = build_ticket_pdf(ticket, history, comments, attachments)
     return Response(
         content=content,
         media_type=PDF_MEDIA_TYPE,

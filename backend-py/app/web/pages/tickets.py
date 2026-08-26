@@ -152,10 +152,18 @@ async def list_page(
 
 @router.get("/tickets/new")
 async def new_ticket_form(request: Request, user: CurrentUser, db: Db):
+    is_staff = _is_staff(user)
     return templates.TemplateResponse(
         request,
         "tickets/new.html",
-        _base_ctx(user, active_nav="ticket-new", cascade_json=await _cascade_json(db), error=None, values={}),
+        _base_ctx(
+            user,
+            active_nav="ticket-new",
+            cascade_json=await _cascade_json(db) if is_staff else "[]",
+            error=None,
+            values={},
+            is_staff=is_staff,
+        ),
     )
 
 
@@ -171,6 +179,13 @@ async def create_ticket_submit(
     typification_id: Annotated[str, Form()] = "",
     priority: Annotated[str, Form()] = "",
 ):
+    # El Usuario Final solo diligencia asunto/descripción — clasificación y
+    # prioridad son campos de Admin/Técnico, tanto en la UI (oculta en
+    # new.html si !is_staff) como aquí server-side, para que no se puedan
+    # colar posteando el form a mano sin pasar por el formulario visible.
+    if not _is_staff(user):
+        category_id = subcategory_id = typification_id = priority = ""
+
     values = {
         "subject": subject,
         "description": description,
@@ -203,15 +218,17 @@ async def create_ticket_submit(
 
 
 async def _rerender_new_with_cascade(request: Request, user: User, db: Db, error: str, values: dict):
+    is_staff = _is_staff(user)
     return templates.TemplateResponse(
         request,
         "tickets/new.html",
         _base_ctx(
             user,
             active_nav="ticket-new",
-            cascade_json=await _cascade_json(db),
+            cascade_json=await _cascade_json(db) if is_staff else "[]",
             error=error,
             values=values,
+            is_staff=is_staff,
         ),
         status_code=400,
     )

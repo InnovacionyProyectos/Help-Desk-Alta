@@ -18,9 +18,11 @@
         <a class="app-sidebar__link{% if active_nav == 'dashboard' %} app-sidebar__link--active{% endif %}" href="/dashboard">Panel</a>
         <a class="app-sidebar__link{% if active_nav == 'tickets' %} app-sidebar__link--active{% endif %}" href="/tickets">Tickets</a>
         <a class="app-sidebar__link{% if active_nav == 'ticket-new' %} app-sidebar__link--active{% endif %}" href="/tickets/new">Nuevo Ticket</a>
-        {% if current_user.role.code == 'ADMIN' %}
+        {% if current_user.role.code in ('ADMIN', 'TECHNICIAN') %}
         <a class="app-sidebar__link{% if active_nav == 'reports' %} app-sidebar__link--active{% endif %}" href="/reports">Reportes</a>
         <a class="app-sidebar__link{% if active_nav == 'users' %} app-sidebar__link--active{% endif %}" href="/admin/users">Usuarios</a>
+        {% endif %}
+        {% if current_user.role.code == 'ADMIN' %}
         <a class="app-sidebar__link{% if active_nav == 'classification' %} app-sidebar__link--active{% endif %}" href="/admin/classification">Clasificación</a>
         {% endif %}
       </aside>

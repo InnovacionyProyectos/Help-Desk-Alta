@@ -29,3 +29,13 @@ class UpdateUserDto(BaseModel):
     role_code: str | None = None
     area_id: int | None = None
     is_active: bool | None = None
+
+
+class ChangePasswordDto(BaseModel):
+    """Nuevo: acción explícita y separada de UpdateUserDto para que un
+    Admin cambie la contraseña de un usuario — el `ChangePasswordDto`
+    original en NestJS existía pero nunca tuvo un endpoint conectado
+    (limitación real del sistema original, corregida aquí desde el lado
+    Admin, no self-service). Misma regla mínima que CreateUserDto.password."""
+
+    password: str = Field(min_length=8, max_length=72)

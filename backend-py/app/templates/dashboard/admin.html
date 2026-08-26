@@ -5,6 +5,23 @@
   <h1>Panel</h1>
 </div>
 
+<div class="card" style="margin-bottom: 16px;">
+  <form method="get" class="filters-bar" style="margin-bottom: 0;">
+    <div class="form-field" style="margin-bottom:0;">
+      <label for="month">Mes</label>
+      <input class="input" type="month" id="month" name="month" value="{{ month }}">
+    </div>
+    <div class="form-field" style="margin-bottom:0;">
+      <button class="btn btn--primary" type="submit">Filtrar</button>
+    </div>
+    {% if month %}
+    <div class="form-field" style="margin-bottom:0;">
+      <a class="btn btn--secondary" href="/dashboard">Ver todo</a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
 <div class="stat-grid">
   <div class="stat-card">
     <p class="stat-card__label">Total de tickets</p>

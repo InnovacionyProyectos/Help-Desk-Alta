@@ -15,8 +15,11 @@ from app.models.user import User
 from app.security.deps import require_role
 from app.services import classification_service
 from app.services.classification_exceptions import (
+    CategoryInUseError,
     CategoryNotFoundError,
+    SubcategoryInUseError,
     SubcategoryNotFoundError,
+    TypificationInUseError,
     TypificationNotFoundError,
 )
 from app.templating import templates
@@ -127,6 +130,21 @@ async def toggle_category_active(category_id: int, request: Request, user: Admin
     return templates.TemplateResponse(request, "admin/classification/_category_node.html", {"category": category})
 
 
+@router.post("/admin/classification/categories/{category_id}/delete")
+async def delete_category_action(category_id: int, request: Request, user: Admin, db: Db):
+    try:
+        await classification_service.delete_category(db, category_id, actor=user)
+    except CategoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CategoryInUseError as exc:
+        # Mismo patron ya establecido (Fase 5 attachments / mejora
+        # eliminar-usuario): raise directo, sin fragmento de error inline —
+        # el boton usa hx-swap="delete", que solo actua sobre una respuesta
+        # 2xx, asi que el nodo simplemente no desaparece si esto se dispara.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return ""
+
+
 # ===================================================================
 # Subcategorías
 # ===================================================================
@@ -219,6 +237,17 @@ async def toggle_subcategory_active(subcategory_id: int, request: Request, user:
     )
 
 
+@router.post("/admin/classification/subcategories/{subcategory_id}/delete")
+async def delete_subcategory_action(subcategory_id: int, request: Request, user: Admin, db: Db):
+    try:
+        await classification_service.delete_subcategory(db, subcategory_id, actor=user)
+    except SubcategoryNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SubcategoryInUseError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return ""
+
+
 # ===================================================================
 # Tipificaciones
 # ===================================================================
@@ -246,7 +275,6 @@ async def create_typification_submit(
     code: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
     display_order: Annotated[int, Form()] = 0,
-    default_priority: Annotated[str, Form()] = "MEDIUM",
 ):
     try:
         await classification_service.create_typification(
@@ -256,7 +284,6 @@ async def create_typification_submit(
             code=code or None,
             description=description or None,
             display_order=display_order,
-            default_priority=default_priority,
             actor=user,
         )
     except SubcategoryNotFoundError as exc:
@@ -286,7 +313,6 @@ async def update_typification_submit(
     code: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
     display_order: Annotated[int, Form()] = 0,
-    default_priority: Annotated[str, Form()] = "MEDIUM",
 ):
     try:
         await classification_service.update_typification(
@@ -296,7 +322,6 @@ async def update_typification_submit(
             code=code or None,
             description=description or None,
             display_order=display_order,
-            default_priority=default_priority,
             actor=user,
         )
     except TypificationNotFoundError as exc:
@@ -313,3 +338,14 @@ async def toggle_typification_active(typification_id: int, request: Request, use
     return templates.TemplateResponse(
         request, "admin/classification/_typification_node.html", {"typification": typification}
     )
+
+
+@router.post("/admin/classification/typifications/{typification_id}/delete")
+async def delete_typification_action(typification_id: int, request: Request, user: Admin, db: Db):
+    try:
+        await classification_service.delete_typification(db, typification_id, actor=user)
+    except TypificationNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TypificationInUseError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return ""

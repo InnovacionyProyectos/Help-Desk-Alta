@@ -5,7 +5,7 @@ TechnicianDashboard.tsx/EndUserDashboard.tsx del frontend React original)."""
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession as DbSession
 
 from app.charts.horizontal_bar import build_horizontal_bar
@@ -63,17 +63,26 @@ CATEGORY_COLORS = ["#0e4bf5", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#0083
 
 
 @router.get("/dashboard")
-async def dashboard_page(request: Request, user: CurrentUser, db: Db):
+async def dashboard_page(
+    request: Request,
+    user: CurrentUser,
+    db: Db,
+    month: Annotated[str | None, Query()] = None,
+):
     role = user.role.code
-    if role == "ADMIN":
-        return await _admin_dashboard(request, user, db)
-    if role == "TECHNICIAN":
-        return await _technician_dashboard(request, user, db)
+    # Técnico ve el mismo panel que Admin (mismos permisos salvo
+    # Clasificación, que sigue siendo exclusiva de Admin — ver
+    # admin_classification.py/admin_users.py). Solo Usuario Final tiene
+    # una vista propia (sus solicitudes activas).
+    if role in ("ADMIN", "TECHNICIAN"):
+        # month llega como "YYYY-MM" desde <input type="month"> o vacío/
+        # ausente ("Ver todo").
+        return await _admin_dashboard(request, user, db, month=month or None)
     return await _end_user_dashboard(request, user, db)
 
 
-async def _admin_dashboard(request: Request, user: User, db: Db):
-    metrics = await dashboard_service.get_admin_metrics(db)
+async def _admin_dashboard(request: Request, user: User, db: Db, month: str | None = None):
+    metrics = await dashboard_service.get_admin_metrics(db, month=month)
 
     total_tickets = sum(item["total"] for item in metrics["by_status"])
     avg_hours = (
@@ -134,21 +143,7 @@ async def _admin_dashboard(request: Request, user: User, db: Db):
             "by_status_chart": by_status_chart,
             "by_category_chart": by_category_chart,
             "treemap_height": TREEMAP_HEIGHT,
-        },
-    )
-
-
-async def _technician_dashboard(request: Request, user: User, db: Db):
-    metrics = await dashboard_service.get_technician_metrics(db, user.id)
-    return templates.TemplateResponse(
-        request,
-        "dashboard/technician.html",
-        {
-            "current_user": user,
-            "active_nav": "dashboard",
-            "my_tickets": metrics["my_tickets"],
-            "team_pending": metrics["team_pending"],
-            "priority_labels": PRIORITY_LABELS,
+            "month": month or "",
         },
     )
 

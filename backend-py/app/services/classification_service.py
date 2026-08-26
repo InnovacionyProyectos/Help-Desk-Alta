@@ -1,15 +1,19 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession as DbSession
 from sqlalchemy.orm import selectinload
 
 from app.models.classification import TicketCategory, TicketSubcategory, TicketTypification
+from app.models.ticket import Ticket
 from app.models.user import User
 from app.schemas.classification import CategoryOption, SubcategoryOption, TypificationOption
 from app.services import audit_service
 from app.services.classification_exceptions import (
+    CategoryInUseError,
     CategoryNotFoundError,
     InvalidClassificationChainError,
+    SubcategoryInUseError,
     SubcategoryNotFoundError,
+    TypificationInUseError,
     TypificationNotFoundError,
 )
 
@@ -223,6 +227,36 @@ async def toggle_category_active(db: DbSession, category_id: int) -> TicketCateg
     return await get_category_node(db, category_id)
 
 
+async def delete_category(db: DbSession, category_id: int, *, actor: User | None = None) -> None:
+    """Borrado real (no lógico) — a diferencia de `toggle_category_active`,
+    que es la vía normal para retirar una categoría del uso diario sin
+    romper el historial. Solo se permite si NINGÚN ticket quedó clasificado
+    con esta categoría: `tickets.category_id` siempre se guarda junto con
+    subcategory_id/typification_id (ver `validate_chain`, todo-o-nada), así
+    que basta revisar `category_id` para cubrir también sus subcategorías y
+    tipificaciones hijas. Si está en uso, se rechaza — el Admin debe
+    desactivarla en su lugar. Si no está en uso, el DELETE cae en cascada
+    sobre sus subcategorías/tipificaciones vía `ON DELETE CASCADE` de la
+    base (`passive_deletes=True` en el modelo, ver `models/classification.py`)."""
+    category = await get_category_or_fail(db, category_id)
+
+    in_use = (
+        await db.execute(select(func.count()).select_from(Ticket).where(Ticket.category_id == category_id))
+    ).scalar_one()
+    if in_use:
+        raise CategoryInUseError(category_id)
+
+    await audit_service.record_delete(
+        db,
+        actor,
+        entity="TicketCategory",
+        entity_id=category_id,
+        old_values={"name": category.name, "code": category.code},
+    )
+    await db.delete(category)
+    await db.commit()
+
+
 # ===================================================================
 # CRUD ADMINISTRATIVO — Subcategorías
 # ===================================================================
@@ -353,6 +387,30 @@ async def toggle_subcategory_active(db: DbSession, subcategory_id: int) -> Ticke
     return await get_subcategory_node(db, subcategory_id)
 
 
+async def delete_subcategory(db: DbSession, subcategory_id: int, *, actor: User | None = None) -> None:
+    """Ver docstring de `delete_category` — mismo criterio (revisar
+    `tickets.subcategory_id`, que cubre también sus tipificaciones hijas)."""
+    subcategory = await get_subcategory_or_fail(db, subcategory_id)
+
+    in_use = (
+        await db.execute(
+            select(func.count()).select_from(Ticket).where(Ticket.subcategory_id == subcategory_id)
+        )
+    ).scalar_one()
+    if in_use:
+        raise SubcategoryInUseError(subcategory_id)
+
+    await audit_service.record_delete(
+        db,
+        actor,
+        entity="TicketSubcategory",
+        entity_id=subcategory_id,
+        old_values={"categoryId": subcategory.category_id, "name": subcategory.name, "code": subcategory.code},
+    )
+    await db.delete(subcategory)
+    await db.commit()
+
+
 # ===================================================================
 # CRUD ADMINISTRATIVO — Tipificaciones
 # ===================================================================
@@ -378,9 +436,14 @@ async def create_typification(
     code: str | None = None,
     description: str | None = None,
     display_order: int = 0,
-    default_priority: str = "MEDIUM",
     actor: User | None = None,
 ) -> TicketTypification:
+    """Decisión de negocio (mejora post-Fase-9): la prioridad ya NO se
+    sugiere/hereda desde la tipificación, se asigna siempre directo en el
+    ticket. Ya no se lee ni asigna `default_priority` aquí — la columna
+    real sigue existiendo en la base (NestJS/`backend/` todavía la usa en
+    producción) y se queda con el `DEFAULT 'MEDIUM'` que ya tiene a nivel
+    de tabla, sin necesidad de setearla explícitamente desde este código."""
     await get_subcategory_or_fail(db, subcategory_id)
     typification = TicketTypification(
         subcategory_id=subcategory_id,
@@ -388,7 +451,6 @@ async def create_typification(
         code=code,
         description=description,
         display_order=display_order,
-        default_priority=default_priority,
     )
     db.add(typification)
     await db.flush()
@@ -403,7 +465,6 @@ async def create_typification(
             "code": code,
             "description": description,
             "displayOrder": display_order,
-            "defaultPriority": default_priority,
         },
     )
     await db.commit()
@@ -420,10 +481,12 @@ async def update_typification(
     code: str | None = None,
     description: str | None = None,
     display_order: int | None = None,
-    default_priority: str | None = None,
     is_active: bool | None = None,
     actor: User | None = None,
 ) -> TicketTypification:
+    """Ya no recibe/asigna `default_priority` (ver docstring de
+    create_typification para el porqué) — la columna sigue existiendo
+    intacta en la base, simplemente este servicio dejó de tocarla."""
     typification = await get_typification_or_fail(db, typification_id)
     old_values = {
         "subcategoryId": typification.subcategory_id,
@@ -431,7 +494,6 @@ async def update_typification(
         "code": typification.code,
         "description": typification.description,
         "displayOrder": typification.display_order,
-        "defaultPriority": typification.default_priority,
         "isActive": typification.is_active,
     }
     if subcategory_id is not None:
@@ -445,8 +507,6 @@ async def update_typification(
         typification.description = description
     if display_order is not None:
         typification.display_order = display_order
-    if default_priority is not None:
-        typification.default_priority = default_priority
     if is_active is not None:
         typification.is_active = is_active
     await audit_service.record_update(
@@ -461,7 +521,6 @@ async def update_typification(
             "code": typification.code,
             "description": typification.description,
             "displayOrder": typification.display_order,
-            "defaultPriority": typification.default_priority,
             "isActive": typification.is_active,
         },
     )
@@ -476,3 +535,31 @@ async def toggle_typification_active(db: DbSession, typification_id: int) -> Tic
     await db.commit()
     await db.refresh(typification)
     return typification
+
+
+async def delete_typification(db: DbSession, typification_id: int, *, actor: User | None = None) -> None:
+    """Ver docstring de `delete_category` — mismo criterio, nivel hoja
+    (revisa `tickets.typification_id` directo)."""
+    typification = await get_typification_or_fail(db, typification_id)
+
+    in_use = (
+        await db.execute(
+            select(func.count()).select_from(Ticket).where(Ticket.typification_id == typification_id)
+        )
+    ).scalar_one()
+    if in_use:
+        raise TypificationInUseError(typification_id)
+
+    await audit_service.record_delete(
+        db,
+        actor,
+        entity="TicketTypification",
+        entity_id=typification_id,
+        old_values={
+            "subcategoryId": typification.subcategory_id,
+            "name": typification.name,
+            "code": typification.code,
+        },
+    )
+    await db.delete(typification)
+    await db.commit()

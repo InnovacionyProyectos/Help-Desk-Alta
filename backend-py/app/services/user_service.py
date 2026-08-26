@@ -11,10 +11,16 @@ from sqlalchemy.orm import selectinload
 
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.user import CreateUserDto, UpdateUserDto
+from app.schemas.user import ChangePasswordDto, CreateUserDto, UpdateUserDto
 from app.security.passwords import hash_password
 from app.services import audit_service
-from app.services.user_exceptions import DuplicateEmailError, RoleNotFoundError, UserNotFoundError
+from app.services.user_exceptions import (
+    CannotDeleteAdminError,
+    CannotDeleteSelfError,
+    DuplicateEmailError,
+    RoleNotFoundError,
+    UserNotFoundError,
+)
 
 _LOAD_OPTS = (selectinload(User.role), selectinload(User.area))
 
@@ -192,12 +198,48 @@ async def unlock_user(db: DbSession, user_id: uuid.UUID, *, actor: User) -> User
     return await get_one(db, user_id)
 
 
-async def soft_delete(db: DbSession, user_id: uuid.UUID, *, actor: User) -> None:
-    """Portado por completitud del servicio (equivalente a `remove()` del
-    UsersController original), pero NO expuesto en ninguna ruta/plantilla:
-    el frontend React original nunca construyó un botón de borrar para
-    esto — ver instrucciones de la Fase 8, regla #5."""
+async def change_password(db: DbSession, user_id: uuid.UUID, dto: ChangePasswordDto, *, actor: User) -> User:
+    """Acción Admin-only, deliberadamente separada de update_user() (form
+    aparte, ver instrucciones) — nunca se registra la contraseña en claro
+    ni el hash en la auditoría, solo un booleano. Resetea
+    must_change_password=True por consistencia con el resto del sistema
+    (hoy no hay pantalla que fuerce ese cambio en el primer login — misma
+    limitación conocida que ya existía para altas nuevas, documentada en
+    memoria)."""
     user = await get_one(db, user_id)
+    user.password_hash = hash_password(dto.password)
+    user.must_change_password = True
+
+    await audit_service.record(
+        db,
+        user_id=actor.id,
+        action="UPDATE",
+        entity="User",
+        entity_id=str(user_id),
+        new_values={"password_changed": True},
+    )
+    await db.commit()
+    return await get_one(db, user_id)
+
+
+async def soft_delete(db: DbSession, user_id: uuid.UUID, *, actor: User) -> None:
+    """Equivalente a `remove()` del UsersController original — portado
+    desde la Fase 8 pero sin exponer en ninguna ruta hasta la mejora
+    post-Fase-9 que agrega el botón "Eliminar" en /admin/users. Un Admin
+    no puede eliminarse a sí mismo (se quedaría sin acceso al panel).
+
+    Técnico tiene, por pedido explícito, los mismos permisos que Admin en
+    esta pantalla salvo una única excepción: no puede eliminar una cuenta
+    con rol Admin (Admin sí puede eliminar cuentas Admin, salvo la propia)."""
+    if actor.id == user_id:
+        raise CannotDeleteSelfError()
+
+    user = await get_one(db, user_id)
+
+    if actor.role.code == "TECHNICIAN" and user.role.code == "ADMIN":
+        raise CannotDeleteAdminError()
+
+    old_email = user.email
     user.deleted_at = datetime.now(timezone.utc)
     user.is_active = False
 
@@ -207,5 +249,6 @@ async def soft_delete(db: DbSession, user_id: uuid.UUID, *, actor: User) -> None
         action="DELETE",
         entity="User",
         entity_id=str(user_id),
+        old_values={"email": old_email},
     )
     await db.commit()

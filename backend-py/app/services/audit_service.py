@@ -83,3 +83,23 @@ async def record_update(
         old_values=old_values,
         new_values=new_values,
     )
+
+
+async def record_delete(
+    db: DbSession,
+    actor: "User | None",
+    *,
+    entity: str,
+    entity_id: object,
+    old_values: dict[str, Any] | None = None,
+) -> None:
+    """Azúcar sobre record() para el caso DELETE — ver nota de record_create
+    sobre actor=None."""
+    await record(
+        db,
+        user_id=actor.id if actor is not None else None,
+        action="DELETE",
+        entity=entity,
+        entity_id=str(entity_id),
+        old_values=old_values,
+    )

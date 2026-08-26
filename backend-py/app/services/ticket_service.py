@@ -81,20 +81,22 @@ async def create_ticket(db: DbSession, dto: CreateTicketDto, requester: User) ->
     if has_any and not has_full:
         raise IncompleteClassificationError()
 
-    typification = None
     if has_full:
-        typification = await classification_service.validate_chain(
-            db, dto.category_id, dto.subcategory_id, dto.typification_id
-        )
+        # validate_chain() sigue validando que category/subcategory/
+        # typification formen una cadena jerárquica válida — solo se dejó
+        # de usar su valor de retorno para derivar la prioridad (ver
+        # decisión de negocio abajo).
+        await classification_service.validate_chain(db, dto.category_id, dto.subcategory_id, dto.typification_id)
 
     open_status = await _get_status_by_code(db, "OPEN")
 
-    if dto.priority is not None:
-        priority = dto.priority.value
-    elif typification is not None:
-        priority = typification.default_priority
-    else:
-        priority = DEFAULT_PRIORITY
+    # Decisión de negocio (mejora post-Fase-9): la prioridad ya NO se
+    # sugiere/hereda desde `typification.default_priority` — se asigna
+    # siempre directo en el ticket (por el solicitante al crear, o por
+    # staff después desde _priority_card.html). Antes este bloque leía
+    # `typification.default_priority` como segundo fallback; ahora es
+    # únicamente dto.priority o MEDIUM.
+    priority = dto.priority.value if dto.priority is not None else DEFAULT_PRIORITY
 
     ticket = Ticket(
         ticket_number=await _generate_ticket_number(db),
