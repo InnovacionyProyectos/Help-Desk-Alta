@@ -114,8 +114,13 @@ async def _admin_dashboard(request: Request, user: User, db: Db, month: str | No
     metrics = await dashboard_service.get_admin_metrics(db, month=month)
 
     total_tickets = sum(item["total"] for item in metrics["by_status"])
-    avg_hours = (
-        f"{metrics['avg_resolution_hours']:.1f}" if metrics["avg_resolution_hours"] is not None else "—"
+    # % resuelto el mismo día, no el promedio en horas: ver la nota larga
+    # en dashboard_service.get_admin_metrics() sobre por qué se cambió
+    # (mejora post-corte, 2026-08-26, pedida explícitamente porque el
+    # promedio generaba alertas de gestión falsas por unos pocos tickets
+    # históricos con meses de demora real).
+    same_day_display = (
+        f"{metrics['same_day_pct']:.1f}%" if metrics["same_day_pct"] is not None else "—"
     )
     highlight_cards = [
         {"label": STATUS_LABELS[item["status"]], "value": item["total"]}
@@ -165,7 +170,7 @@ async def _admin_dashboard(request: Request, user: User, db: Db, month: str | No
             "current_user": user,
             "active_nav": "dashboard",
             "total_tickets": total_tickets,
-            "avg_hours": avg_hours,
+            "same_day_display": same_day_display,
             "highlight_cards": highlight_cards,
             "by_area_chart": by_area_chart,
             "by_type_chart": by_type_chart,

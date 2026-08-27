@@ -5,7 +5,7 @@ explícito."""
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession as DbSession
 
 from app.models.area import Area
@@ -110,6 +110,28 @@ async def get_admin_metrics(db: DbSession, month: str | None = None) -> dict:
         avg_stmt = avg_stmt.where(*date_filter)
     avg_resolution_hours = (await db.execute(avg_stmt)).scalar_one()
 
+    # % resuelto el mismo día que se creó: métrica de la tarjeta destacada
+    # del panel (mejora post-corte, 2026-08-26) — el promedio simple se
+    # dejó de mostrar ahí porque un puñado de tickets reales que quedaron
+    # meses abiertos (backlog real del histórico importado) lo arrastraban
+    # a ~88h y generaba una alerta de gestión falsa, pese a que la mayoría
+    # de los casos (>80%) se resuelven el mismo día — un promedio no es
+    # robusto ante esos pocos valores extremos, el % de mismo día sí lo es.
+    # Mismo filtro anti-inconsistencia y mismo `date_filter` que el
+    # promedio, para que ambos números sigan siendo comparables entre sí.
+    same_day_stmt = select(
+        func.count().label("total"),
+        func.count()
+        .filter(cast(Ticket.resolved_at, Date) == cast(Ticket.created_at, Date))
+        .label("same_day"),
+    ).where(Ticket.resolved_at.is_not(None), Ticket.resolved_at >= Ticket.created_at)
+    if date_filter:
+        same_day_stmt = same_day_stmt.where(*date_filter)
+    same_day_row = (await db.execute(same_day_stmt)).one()
+    same_day_pct = (
+        round(100 * same_day_row.same_day / same_day_row.total, 1) if same_day_row.total else None
+    )
+
     return {
         "by_status": by_status,
         "by_priority": by_priority,
@@ -117,6 +139,7 @@ async def get_admin_metrics(db: DbSession, month: str | None = None) -> dict:
         "by_category": by_category,
         "by_area": by_area,
         "avg_resolution_hours": float(avg_resolution_hours) if avg_resolution_hours is not None else None,
+        "same_day_pct": same_day_pct,
     }
 
 
