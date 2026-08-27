@@ -20,6 +20,9 @@ out/
 uploads/
 backend/uploads/
 
+# Respaldos de base de datos (datos reales/personales, nunca al repo)
+backups/
+
 # Logs
 logs/
 *.log
