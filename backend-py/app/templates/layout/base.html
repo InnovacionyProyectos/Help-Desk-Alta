@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-    <link rel="stylesheet" href="/static/css/app.css" />
+    <link rel="stylesheet" href="/static/css/app.css?v={{ asset_v }}" />
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <title>{% block title %}Alta · Help Desk{% endblock %}</title>
   </head>
@@ -40,9 +40,12 @@
               </span>
             </div>
           </div>
-          <form method="post" action="/logout">
-            <button class="btn btn--secondary" type="submit">Cerrar sesión</button>
-          </form>
+          <div style="display:flex; gap:8px;">
+            <a class="btn btn--secondary" href="/profile">Perfil</a>
+            <form method="post" action="/logout">
+              <button class="btn btn--secondary" type="submit">Cerrar sesión</button>
+            </form>
+          </div>
         </header>
         <main class="app-content">
           {% block content %}{% endblock %}

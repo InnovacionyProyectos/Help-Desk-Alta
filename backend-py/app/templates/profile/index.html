@@ -1,0 +1,61 @@
+{% extends "layout/base.html" %}
+{% block title %}Mi perfil · Alta Help Desk{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Mi perfil</h1>
+</div>
+
+<div class="detail-grid">
+  <div>
+    <div class="card">
+      <h3 style="margin:0 0 16px; color: var(--color-primary); font-size:16px; font-weight:700;">Cambiar contraseña</h3>
+
+      {% if updated %}
+      <div style="background:#f0fdf4; color: var(--color-success); border:1px solid #bbf7d0; border-radius: var(--radius); padding:10px 12px; font-size:13px; margin-bottom:16px;">Contraseña actualizada correctamente.</div>
+      {% endif %}
+      {% if error %}<div class="auth-error">{{ error }}</div>{% endif %}
+
+      <form method="post" action="/profile/password">
+        <div class="form-field">
+          <label for="current_password">Contraseña actual</label>
+          <input class="input" type="password" id="current_password" name="current_password" required autocomplete="current-password">
+        </div>
+        <div class="form-field">
+          <label for="new_password">Nueva contraseña</label>
+          <input class="input" type="password" id="new_password" name="new_password" minlength="8" required autocomplete="new-password">
+          <div class="form-field__hint">Mínimo 8 caracteres.</div>
+        </div>
+        <div class="form-field">
+          <label for="confirm_password">Confirmar nueva contraseña</label>
+          <input class="input" type="password" id="confirm_password" name="confirm_password" minlength="8" required autocomplete="new-password">
+        </div>
+        <button class="btn btn--primary" type="submit">Cambiar contraseña</button>
+      </form>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h3 style="margin:0 0 16px; color: var(--color-primary); font-size:16px; font-weight:700;">Datos de la cuenta</h3>
+      <div style="display:flex; flex-direction:column; gap:12px; font-size:14px;">
+        <div>
+          <div style="color: var(--color-text-muted); font-size:12px;">Nombre</div>
+          <div>{{ current_user.full_name }}</div>
+        </div>
+        <div>
+          <div style="color: var(--color-text-muted); font-size:12px;">Correo</div>
+          <div>{{ current_user.email }}</div>
+        </div>
+        <div>
+          <div style="color: var(--color-text-muted); font-size:12px;">Rol</div>
+          <div>{{ role_label }}</div>
+        </div>
+        <div>
+          <div style="color: var(--color-text-muted); font-size:12px;">Área</div>
+          <div>{{ current_user.area.name if current_user.area else 'Sin área' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -330,6 +330,18 @@ textarea.input:focus {
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  /* El selector global `a { color: ... }` no quita el subrayado por
+     defecto del navegador — sin esto, cualquier botón que sea un <a> (no
+     un <button>, ej. "Perfil", "Cancelar", "+ Nuevo usuario") se ve
+     subrayado. */
+  text-decoration: none;
+  /* <button> NO hereda font-family del body por defecto en la hoja de
+     estilos nativa del navegador (a diferencia de <a>, que sí hereda) —
+     sin esto, un <button class="btn"> ("Cerrar sesión") se ve con la
+     fuente del sistema en vez de DM Sans, distinta a un <a class="btn">
+     ("Perfil") aunque ambos compartan la misma clase. Mismo fix que ya
+     tenían .input/.select más abajo, aplicado aquí también. */
+  font-family: inherit;
 }
 
 .btn:disabled {

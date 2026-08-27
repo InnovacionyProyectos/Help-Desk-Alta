@@ -18,7 +18,7 @@ from app.routers import classification as classification_api
 from app.security.exceptions import ForbiddenException, NotAuthenticatedException
 from app.security.rate_limit import limiter
 from app.templating import templates
-from app.web.pages import admin_classification, admin_users, attachments, auth, dashboard, reports, tickets
+from app.web.pages import admin_classification, admin_users, attachments, auth, dashboard, profile, reports, tickets
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,7 @@ async def root():
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)
+app.include_router(profile.router)
 app.include_router(classification_api.router)
 app.include_router(admin_classification.router)
 app.include_router(admin_users.router)

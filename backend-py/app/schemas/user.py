@@ -39,3 +39,14 @@ class ChangePasswordDto(BaseModel):
     Admin, no self-service). Misma regla mínima que CreateUserDto.password."""
 
     password: str = Field(min_length=8, max_length=72)
+
+
+class SelfChangePasswordDto(BaseModel):
+    """Panel de perfil (mejora post-corte): a diferencia de
+    ChangePasswordDto (Admin cambiándole la clave a otro, sin necesidad de
+    saber la actual), aquí SÍ se exige la contraseña actual — es el propio
+    usuario cambiando la suya, mismo patrón de seguridad estándar de
+    "cambiar mi contraseña" en cualquier sistema."""
+
+    current_password: str
+    new_password: str = Field(min_length=8, max_length=72)

@@ -11,13 +11,14 @@ from sqlalchemy.orm import selectinload
 
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.user import ChangePasswordDto, CreateUserDto, UpdateUserDto
-from app.security.passwords import hash_password
+from app.schemas.user import ChangePasswordDto, CreateUserDto, SelfChangePasswordDto, UpdateUserDto
+from app.security.passwords import hash_password, verify_password
 from app.services import audit_service
 from app.services.user_exceptions import (
     CannotDeleteAdminError,
     CannotDeleteSelfError,
     DuplicateEmailError,
+    IncorrectCurrentPasswordError,
     RoleNotFoundError,
     UserNotFoundError,
 )
@@ -220,6 +221,32 @@ async def change_password(db: DbSession, user_id: uuid.UUID, dto: ChangePassword
     )
     await db.commit()
     return await get_one(db, user_id)
+
+
+async def change_own_password(db: DbSession, user: User, dto: SelfChangePasswordDto) -> None:
+    """Panel de perfil (mejora post-corte, pedida explícitamente): a
+    diferencia de `change_password()` (Admin-only, sin verificar la clave
+    actual), aquí el propio usuario cambia su contraseña y SÍ debe probar
+    que conoce la actual — si no, cualquiera con una sesión abierta sin
+    vigilancia podría secuestrar la cuenta cambiándole la clave. Al ser el
+    propio dueño quien la elige, `must_change_password` queda en False (no
+    hace falta forzar otro cambio después, a diferencia del reseteo por
+    Admin)."""
+    if not verify_password(user.password_hash, dto.current_password):
+        raise IncorrectCurrentPasswordError()
+
+    user.password_hash = hash_password(dto.new_password)
+    user.must_change_password = False
+
+    await audit_service.record(
+        db,
+        user_id=user.id,
+        action="UPDATE",
+        entity="User",
+        entity_id=str(user.id),
+        new_values={"password_changed": True, "self_service": True},
+    )
+    await db.commit()
 
 
 async def soft_delete(db: DbSession, user_id: uuid.UUID, *, actor: User) -> None:

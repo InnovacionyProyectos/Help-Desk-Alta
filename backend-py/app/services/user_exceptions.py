@@ -30,6 +30,15 @@ class CannotDeleteSelfError(Exception):
         super().__init__("No puede eliminar su propia cuenta")
 
 
+class IncorrectCurrentPasswordError(Exception):
+    """Panel de perfil: el usuario escribió mal su contraseña actual al
+    intentar cambiarla — no revela si el correo existe ni ningún otro
+    detalle, mismo espíritu que InvalidCredentialsError en el login."""
+
+    def __init__(self):
+        super().__init__("La contraseña actual no es correcta")
+
+
 class CannotDeleteAdminError(Exception):
     """Técnico tiene los mismos permisos que Admin en Usuarios (crear,
     editar, resetear contraseña, eliminar) salvo esta única excepción,
