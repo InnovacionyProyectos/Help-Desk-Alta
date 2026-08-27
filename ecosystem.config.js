@@ -61,7 +61,18 @@ module.exports = {
       // Ruta absoluta: PM2 no resuelve `interpreter` relativo a `cwd`, solo
       // busca en PATH o exige ruta completa (confirmado en vivo: con
       // './venv/Scripts/python.exe' fallaba con "NOT AVAILABLE in PATH").
-      interpreter: path.resolve(__dirname, 'backend-py', 'venv', 'Scripts', 'python.exe'),
+      //
+      // pythonw.exe, NO python.exe: es la variante de Python que no asigna
+      // consola al sistema operativo en absoluto (viene con todo CPython,
+      // pensada para apps sin ventana). `windowsHide: true` en PM2 no fue
+      // suficiente para evitar la consola visible en este Windows/versión
+      // de PM2 (confirmado en vivo: seguía abriéndose una ventana negra que,
+      // al cerrarla, mataba el proceso y PM2 lo reiniciaba de inmediato con
+      // otra ventana — bucle infinito). Con pythonw.exe no hay consola que
+      // cerrar. stdout/stderr los sigue capturando PM2 igual (llegan
+      // redirigidos a un pipe, no dependen de que exista una consola real).
+      interpreter: path.resolve(__dirname, 'backend-py', 'venv', 'Scripts', 'pythonw.exe'),
+      windowsHide: true,
       autorestart: true,
       watch: false,
       max_restarts: 10,
