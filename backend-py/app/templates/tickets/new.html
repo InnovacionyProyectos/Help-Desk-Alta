@@ -24,6 +24,17 @@
     </div>
 
     {% if is_staff %}
+    <div class="form-field">
+      <label for="requester_id">Crear a nombre de</label>
+      <select class="select" id="requester_id" name="requester_id">
+        <option value="">Yo mismo ({{ current_user.full_name }})</option>
+        {% for u in requester_users %}
+        <option value="{{ u.id }}" {% if values.requester_id == (u.id | string) %}selected{% endif %}>{{ u.full_name }} ({{ u.email }})</option>
+        {% endfor %}
+      </select>
+      <div class="form-field__hint">El ticket queda asignado a esta persona como solicitante, no a quien lo está creando.</div>
+    </div>
+
     <div class="form-row">
       <div class="form-field">
         <label for="category_id">Categoría</label>

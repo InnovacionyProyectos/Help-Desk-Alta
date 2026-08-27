@@ -33,3 +33,11 @@ class IncompleteClassificationError(Exception):
 
     def __init__(self):
         super().__init__("Debe indicar categoría, subcategoría y tipificación juntas, o ninguna")
+
+
+class RequesterNotFoundError(Exception):
+    """Admin/Técnico creando un ticket "a nombre de" un solicitante que no
+    existe o está inactivo/eliminado."""
+
+    def __init__(self):
+        super().__init__("El solicitante indicado no existe o no está activo")

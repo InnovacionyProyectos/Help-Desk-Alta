@@ -37,12 +37,17 @@ class CreateTicketDto(BaseModel):
     category_id: int | None = None
     subcategory_id: int | None = None
     typification_id: int | None = None
-    # Si no se envía, se toma el default_priority de la tipificación (si
-    # hay) o MEDIUM si el ticket aún no está clasificado. No incluye
-    # ticket_type a propósito: el DTO original tampoco lo tiene, el ticket
-    # siempre nace INCIDENTE (default de columna) y se cambia después
-    # con UpdateTicketDto.
+    # Si no se envía, el ticket queda en MEDIUM (la prioridad ya no se
+    # hereda de la tipificación, ver decisión de negocio en
+    # ticket_service.create_ticket()). No incluye ticket_type a propósito:
+    # el DTO original tampoco lo tiene, el ticket siempre nace INCIDENTE
+    # (default de columna) y se cambia después con UpdateTicketDto.
     priority: TicketPriority | None = None
+    # Solo Admin/Técnico pueden enviarlo (crear "a nombre de" otro
+    # usuario, mejora post-corte pedida explícitamente) — un END_USER
+    # siempre crea a nombre propio, sin excepción; ver el chequeo
+    # server-side en ticket_service.create_ticket().
+    requester_id: uuid.UUID | None = None
 
 
 class UpdateTicketDto(BaseModel):

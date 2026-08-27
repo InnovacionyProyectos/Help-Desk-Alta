@@ -36,6 +36,7 @@ from app.services.ticket_exceptions import (
     ForbiddenTicketAccessError,
     IncompleteClassificationError,
     InvalidStatusTransitionError,
+    RequesterNotFoundError,
     TicketClosedError,
     TicketNotFoundError,
 )
@@ -59,6 +60,19 @@ async def _list_technicians(db: Db) -> list[User]:
     result = await db.execute(
         select(User)
         .where(User.role.has(Role.code == "TECHNICIAN"), User.is_active.is_(True))
+        .order_by(User.first_name, User.last_name)
+    )
+    return list(result.scalars().unique().all())
+
+
+async def _list_active_users(db: Db) -> list[User]:
+    """Para el <select> de "Crear a nombre de" en /tickets/new — solo
+    Admin/Técnico lo ven. Todos los roles activos (no solo END_USER):
+    staff a veces crea un ticket a nombre de otro miembro del equipo, no
+    únicamente de un usuario final."""
+    result = await db.execute(
+        select(User)
+        .where(User.deleted_at.is_(None), User.is_active.is_(True))
         .order_by(User.first_name, User.last_name)
     )
     return list(result.scalars().unique().all())
@@ -168,6 +182,7 @@ async def new_ticket_form(request: Request, user: CurrentUser, db: Db):
             error=None,
             values={},
             is_staff=is_staff,
+            requester_users=await _list_active_users(db) if is_staff else [],
         ),
     )
 
@@ -183,14 +198,16 @@ async def create_ticket_submit(
     subcategory_id: Annotated[str, Form()] = "",
     typification_id: Annotated[str, Form()] = "",
     priority: Annotated[str, Form()] = "",
+    requester_id: Annotated[str, Form()] = "",
     file: Annotated[UploadFile | None, File()] = None,
 ):
-    # El Usuario Final solo diligencia asunto/descripción — clasificación y
-    # prioridad son campos de Admin/Técnico, tanto en la UI (oculta en
-    # new.html si !is_staff) como aquí server-side, para que no se puedan
-    # colar posteando el form a mano sin pasar por el formulario visible.
+    # El Usuario Final solo diligencia asunto/descripción — clasificación,
+    # prioridad y "crear a nombre de" son campos de Admin/Técnico, tanto en
+    # la UI (ocultos en new.html si !is_staff) como aquí server-side, para
+    # que no se puedan colar posteando el form a mano sin pasar por el
+    # formulario visible.
     if not _is_staff(user):
-        category_id = subcategory_id = typification_id = priority = ""
+        category_id = subcategory_id = typification_id = priority = requester_id = ""
 
     values = {
         "subject": subject,
@@ -199,6 +216,7 @@ async def create_ticket_submit(
         "subcategory_id": subcategory_id,
         "typification_id": typification_id,
         "priority": priority,
+        "requester_id": requester_id,
     }
 
     try:
@@ -209,6 +227,7 @@ async def create_ticket_submit(
             subcategory_id=int(subcategory_id) if subcategory_id else None,
             typification_id=int(typification_id) if typification_id else None,
             priority=priority or None,
+            requester_id=requester_id or None,
         )
     except ValidationError:
         return await _rerender_new_with_cascade(request, user, db, "Datos inválidos: revise el formulario", values)
@@ -218,6 +237,8 @@ async def create_ticket_submit(
     except IncompleteClassificationError as exc:
         return await _rerender_new_with_cascade(request, user, db, str(exc), values)
     except InvalidClassificationChainError as exc:
+        return await _rerender_new_with_cascade(request, user, db, str(exc), values)
+    except RequesterNotFoundError as exc:
         return await _rerender_new_with_cascade(request, user, db, str(exc), values)
 
     # Adjunto opcional en el mismo formulario de creación, disponible para
@@ -252,6 +273,7 @@ async def _rerender_new_with_cascade(request: Request, user: User, db: Db, error
             error=error,
             values=values,
             is_staff=is_staff,
+            requester_users=await _list_active_users(db) if is_staff else [],
         ),
         status_code=400,
     )

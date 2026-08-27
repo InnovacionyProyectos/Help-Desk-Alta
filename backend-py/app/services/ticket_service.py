@@ -28,6 +28,7 @@ from app.services.ticket_exceptions import (
     ForbiddenTicketAccessError,
     IncompleteClassificationError,
     InvalidStatusTransitionError,
+    RequesterNotFoundError,
     TicketClosedError,
     TicketNotFoundError,
 )
@@ -75,7 +76,23 @@ def _assert_ticket_not_closed(ticket: Ticket) -> None:
 # ===================================================================
 
 
-async def create_ticket(db: DbSession, dto: CreateTicketDto, requester: User) -> Ticket:
+async def create_ticket(db: DbSession, dto: CreateTicketDto, actor: User) -> Ticket:
+    """`actor` es quien está enviando el formulario — normalmente el mismo
+    solicitante, pero Admin/Técnico pueden crear "a nombre de" otro
+    usuario (`dto.requester_id`, mejora post-corte pedida explícitamente).
+    Un END_USER nunca puede fijar `requester_id`: la ruta ya lo descarta
+    server-side antes de construir el DTO (ver web/pages/tickets.py), y
+    aquí se ignora igual si de algún modo llegara — el área heredada y el
+    dueño real del ticket siempre son el `requester` resuelto, no `actor`."""
+    requester = actor
+    if dto.requester_id is not None and actor.role.code in ("ADMIN", "TECHNICIAN"):
+        result = await db.execute(
+            select(User).where(User.id == dto.requester_id, User.deleted_at.is_(None), User.is_active.is_(True))
+        )
+        requester = result.scalar_one_or_none()
+        if requester is None:
+            raise RequesterNotFoundError()
+
     has_any = dto.category_id or dto.subcategory_id or dto.typification_id
     has_full = dto.category_id and dto.subcategory_id and dto.typification_id
     if has_any and not has_full:
@@ -126,7 +143,7 @@ async def create_ticket(db: DbSession, dto: CreateTicketDto, requester: User) ->
     await db.flush()
     await audit_service.record_create(
         db,
-        requester,
+        actor,
         entity="Ticket",
         entity_id=ticket.id,
         new_values={
@@ -137,6 +154,10 @@ async def create_ticket(db: DbSession, dto: CreateTicketDto, requester: User) ->
             "categoryId": ticket.category_id,
             "subcategoryId": ticket.subcategory_id,
             "typificationId": ticket.typification_id,
+            # Solo se anota cuando difiere de quien hizo la acción — un
+            # END_USER creando su propio ticket no necesita este campo
+            # redundante en cada fila de auditoría.
+            **({"requesterId": str(requester.id)} if requester.id != actor.id else {}),
         },
     )
     await db.commit()
