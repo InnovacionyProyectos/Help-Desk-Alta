@@ -5,7 +5,7 @@ inyectados), siguiendo el mismo patrón que classification_service.py."""
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession as DbSession
 
 from app.models.ticket import (
@@ -153,6 +153,7 @@ async def list_tickets(
     ticket_type: str | None = None,
     requester_id: uuid.UUID | None = None,
     assigned_to_id: uuid.UUID | None = None,
+    search: str | None = None,
 ) -> tuple[list[Ticket], int, int, int]:
     page = max(page, 1)
     limit = min(max(limit, 1), 100)
@@ -168,6 +169,21 @@ async def list_tickets(
         conditions.append(Ticket.requester_id == requester_id)
     if assigned_to_id is not None:
         conditions.append(Ticket.assigned_to_id == assigned_to_id)
+    if search:
+        # Búsqueda libre (pedida explícitamente para los 3 roles): por
+        # número de caso o por palabra clave en asunto/descripción — un
+        # solo cuadro, sin distinguir "modo" de búsqueda, el patrón ILIKE
+        # cubre los dos usos a la vez. `%search%` en vez de full-text
+        # search: volumen de datos bajo (cientos de tickets, no millones),
+        # no justifica la complejidad de un índice GIN/tsvector.
+        pattern = f"%{search}%"
+        conditions.append(
+            or_(
+                Ticket.ticket_number.ilike(pattern),
+                Ticket.subject.ilike(pattern),
+                Ticket.description.ilike(pattern),
+            )
+        )
 
     count_stmt = select(func.count()).select_from(Ticket).where(*conditions)
     total = (await db.execute(count_stmt)).scalar_one()

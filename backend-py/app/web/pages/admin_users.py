@@ -1,10 +1,17 @@
 """Pantalla de administración de Usuarios. El NestJS original protegía
 todo el controller con @Roles('ADMIN') a nivel de clase; por pedido
-explícito del usuario, Técnico ahora tiene los mismos permisos que Admin
-en TODA la aplicación excepto Clasificación — incluyendo Usuarios, con
-una única excepción: un Técnico no puede eliminar una cuenta con rol
-Admin (ver CannotDeleteAdminError en user_service.soft_delete()). Admin
-sí puede eliminar cuentas Admin (salvo la propia).
+explícito del usuario, Técnico tiene los mismos permisos que Admin en
+TODA la aplicación excepto Clasificación — incluyendo Usuarios —, con dos
+excepciones sobre esta pantalla en particular:
+1. Un Técnico no puede eliminar NINGUNA cuenta (ni siquiera una que no sea
+   Admin) — ruta `delete_action` restringida a `AdminOnly`, ajuste
+   posterior pedido explícitamente: antes solo se le bloqueaba eliminar
+   cuentas Admin (`CannotDeleteAdminError` en `user_service.soft_delete()`,
+   que se deja intacta como defensa en profundidad aunque ya no sea
+   alcanzable por esta ruta — ver ese archivo). Admin sí puede eliminar
+   cualquier cuenta (salvo la propia).
+2. El resto de acciones (crear, editar, activar/desactivar, desbloquear,
+   cambiar contraseña) siguen siendo `StaffOnly` (Admin + Técnico).
 
 El sistema original SOLO tiene esta pantalla de administración: no hay
 pantalla de Áreas (se gestionan por API/BD directo) ni de Roles (los 3
@@ -39,6 +46,7 @@ router = APIRouter()
 
 DbSession = Annotated[DbSessionType, Depends(get_db)]
 StaffOnly = Annotated[User, Depends(require_role("ADMIN", "TECHNICIAN"))]
+AdminOnly = Annotated[User, Depends(require_role("ADMIN"))]
 
 
 def _nav_ctx(user: User, **extra) -> dict:
@@ -209,7 +217,7 @@ async def unlock_action(user_id: uuid.UUID, request: Request, user: StaffOnly, d
 
 
 @router.post("/admin/users/{user_id}/delete")
-async def delete_action(user_id: uuid.UUID, request: Request, user: StaffOnly, db: DbSession):
+async def delete_action(user_id: uuid.UUID, request: Request, user: AdminOnly, db: DbSession):
     try:
         await user_service.soft_delete(db, user_id, actor=user)
     except UserNotFoundError as exc:

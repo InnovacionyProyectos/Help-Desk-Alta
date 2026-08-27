@@ -9,7 +9,7 @@
   {% if error %}
   <div class="auth-error">{{ error }}</div>
   {% endif %}
-  <form method="post" action="/tickets/new">
+  <form method="post" action="/tickets/new" enctype="multipart/form-data">
     <div class="form-field">
       <label for="subject">Asunto</label>
       <input class="input" type="text" id="subject" name="subject" maxlength="200" required value="{{ values.subject or '' }}">
@@ -17,6 +17,10 @@
     <div class="form-field">
       <label for="description">Descripción</label>
       <textarea class="input" id="description" name="description" rows="5" required>{{ values.description or '' }}</textarea>
+    </div>
+    <div class="form-field">
+      <label for="file">Adjuntar archivo (opcional)</label>
+      <input class="input" type="file" id="file" name="file">
     </div>
 
     {% if is_staff %}

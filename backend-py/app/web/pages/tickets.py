@@ -9,8 +9,9 @@ cambió)."""
 import json
 import uuid
 from typing import Annotated
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -29,6 +30,7 @@ from app.schemas.ticket import (
 )
 from app.security.deps import CurrentUser, require_role
 from app.services import attachments_service, classification_service, ticket_service
+from app.services.attachments_exceptions import FileTooLargeError, InvalidExtensionError
 from app.services.classification_exceptions import InvalidClassificationChainError
 from app.services.ticket_exceptions import (
     ForbiddenTicketAccessError,
@@ -102,6 +104,7 @@ async def list_page(
     priority: str = "",
     ticket_type: str = "",
     view: str = "",
+    search: str = "",
 ):
     is_staff = _is_staff(user)
     if not is_staff:
@@ -121,6 +124,7 @@ async def list_page(
         ticket_type=ticket_type or None,
         requester_id=requester_id,
         assigned_to_id=assigned_to_id,
+        search=search or None,
     )
     total_pages = max((total + limit - 1) // limit, 1)
     statuses = await _list_statuses(db)
@@ -141,6 +145,7 @@ async def list_page(
             filter_status=status,
             filter_priority=priority,
             filter_type=ticket_type,
+            filter_search=search,
         ),
     )
 
@@ -178,6 +183,7 @@ async def create_ticket_submit(
     subcategory_id: Annotated[str, Form()] = "",
     typification_id: Annotated[str, Form()] = "",
     priority: Annotated[str, Form()] = "",
+    file: Annotated[UploadFile | None, File()] = None,
 ):
     # El Usuario Final solo diligencia asunto/descripción — clasificación y
     # prioridad son campos de Admin/Técnico, tanto en la UI (oculta en
@@ -214,6 +220,23 @@ async def create_ticket_submit(
     except InvalidClassificationChainError as exc:
         return await _rerender_new_with_cascade(request, user, db, str(exc), values)
 
+    # Adjunto opcional en el mismo formulario de creación, disponible para
+    # los 3 roles (Usuario Final incluido — antes solo podía adjuntar
+    # DESPUÉS de creado el ticket, desde la card de Adjuntos del detalle).
+    # No se pasa por ticket_service.create_ticket() porque el adjunto
+    # necesita el id del ticket, que recién existe después del flush/commit
+    # de arriba — se sube aparte, reusando attachments_service.upload()
+    # (misma validación de tamaño/extensión que la subida normal). Si la
+    # subida falla, el ticket ya se creó y NO se pierde por eso — se
+    # redirige al detalle con un aviso, igual que si lo hubiera intentado
+    # adjuntar justo después desde ahí.
+    if file is not None and file.filename:
+        try:
+            await attachments_service.upload(db, ticket.id, file, None, user)
+        except (FileTooLargeError, InvalidExtensionError) as exc:
+            query = urlencode({"attach_error": str(exc)})
+            return RedirectResponse(url=f"/tickets/{ticket.id}?{query}", status_code=303)
+
     return RedirectResponse(url=f"/tickets/{ticket.id}", status_code=303)
 
 
@@ -240,7 +263,13 @@ async def _rerender_new_with_cascade(request: Request, user: User, db: Db, error
 
 
 @router.get("/tickets/{ticket_id}")
-async def detail_page(ticket_id: uuid.UUID, request: Request, user: CurrentUser, db: Db):
+async def detail_page(
+    ticket_id: uuid.UUID,
+    request: Request,
+    user: CurrentUser,
+    db: Db,
+    attach_error: Annotated[str | None, Query()] = None,
+):
     try:
         ticket = await ticket_service.get_one(db, ticket_id, actor=user)
     except TicketNotFoundError as exc:
@@ -272,6 +301,7 @@ async def detail_page(ticket_id: uuid.UUID, request: Request, user: CurrentUser,
             is_staff=is_staff,
             is_end_user=not is_staff,
             is_closed=ticket.status.code == "CLOSED",
+            attach_error=attach_error,
         ),
     )
 

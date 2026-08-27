@@ -7,6 +7,10 @@
 </div>
 
 <form method="get" action="/tickets" class="filters-bar">
+  <div class="form-field" style="min-width:260px;">
+    <label for="search">Buscar</label>
+    <input class="input" type="search" id="search" name="search" placeholder="Número de caso o palabra clave…" value="{{ filter_search }}">
+  </div>
   {% if is_staff %}
   <div class="form-field">
     <label for="view">Vista</label>
@@ -86,10 +90,10 @@
   <div class="pagination">
     <span>Página {{ page }} de {{ total_pages }} ({{ total }} ticket{{ 's' if total != 1 else '' }})</span>
     {% if page > 1 %}
-    <a class="link-btn" href="?page={{ page - 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}">← Anterior</a>
+    <a class="link-btn" href="?page={{ page - 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}&search={{ filter_search | urlencode }}">← Anterior</a>
     {% endif %}
     {% if page < total_pages %}
-    <a class="link-btn" href="?page={{ page + 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}">Siguiente →</a>
+    <a class="link-btn" href="?page={{ page + 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}&search={{ filter_search | urlencode }}">Siguiente →</a>
     {% endif %}
   </div>
 </div>

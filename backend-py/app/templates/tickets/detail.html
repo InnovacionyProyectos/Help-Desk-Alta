@@ -1,6 +1,9 @@
 {% extends "layout/base.html" %}
 {% block title %}{{ ticket.ticket_number }} · Alta Help Desk{% endblock %}
 {% block content %}
+{% if attach_error %}
+<div class="auth-error" style="margin-bottom:16px;">El ticket se creó correctamente, pero el archivo adjunto no se pudo subir: {{ attach_error }}. Puede intentarlo de nuevo desde la card de Adjuntos abajo.</div>
+{% endif %}
 <div id="ticket-header" class="card" style="margin-bottom:20px;">
   {% include "tickets/_header_inner.html" %}
 </div>
