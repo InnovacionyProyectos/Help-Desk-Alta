@@ -56,10 +56,13 @@ PRIORITY_LABELS = {"LOW": "Baja", "MEDIUM": "Media", "HIGH": "Alta", "CRITICAL":
 # ===================================================================
 
 
-async def _list_technicians(db: Db) -> list[User]:
+async def _list_assignable_staff(db: Db) -> list[User]:
+    """Para el <select> de "Asignar a" de la card de Acciones — Admin y
+    Técnico, no solo Técnico (mejora post-corte, pedida explícitamente:
+    "en varias ocasiones los administradores pueden atender casos")."""
     result = await db.execute(
         select(User)
-        .where(User.role.has(Role.code == "TECHNICIAN"), User.is_active.is_(True))
+        .where(User.role.has(Role.code.in_(("ADMIN", "TECHNICIAN"))), User.is_active.is_(True))
         .order_by(User.first_name, User.last_name)
     )
     return list(result.scalars().unique().all())
@@ -304,7 +307,7 @@ async def detail_page(
     attachments = await attachments_service.list_by_ticket(db, ticket_id, user)
 
     is_staff = _is_staff(user)
-    technicians = await _list_technicians(db) if is_staff else []
+    technicians = await _list_assignable_staff(db) if is_staff else []
     statuses = await _list_statuses(db)
     cascade_json = await _cascade_json(db) if is_staff else "[]"
 
@@ -479,7 +482,7 @@ async def assign_ticket_submit(
         _base_ctx(
             user,
             ticket=ticket,
-            technicians=await _list_technicians(db),
+            technicians=await _list_assignable_staff(db),
             statuses=await _list_statuses(db),
             is_staff=True,
             is_closed=ticket.status.code == "CLOSED",
@@ -521,7 +524,7 @@ async def change_status_submit(
         _base_ctx(
             user,
             ticket=ticket,
-            technicians=await _list_technicians(db) if is_staff else [],
+            technicians=await _list_assignable_staff(db) if is_staff else [],
             statuses=await _list_statuses(db),
             is_staff=is_staff,
             is_closed=ticket.status.code == "CLOSED",

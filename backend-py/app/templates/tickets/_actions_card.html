@@ -4,11 +4,11 @@
 
   {% if is_staff and not is_closed %}
   <div style="margin-bottom:20px;">
-    <h4 style="margin-bottom:8px; font-size:14px;">Asignar técnico</h4>
+    <h4 style="margin-bottom:8px; font-size:14px;">Asignar a</h4>
     <form hx-post="/tickets/{{ ticket.id }}/assign" hx-target="#card-actions" hx-swap="outerHTML">
       <div class="form-field">
         <select class="select" name="technician_id" required>
-          <option value="">Seleccione un técnico</option>
+          <option value="">Seleccione un responsable</option>
           {% for tech in technicians %}
           <option value="{{ tech.id }}" {% if ticket.assigned_to_id == tech.id %}selected{% endif %}>{{ tech.full_name }}</option>
           {% endfor %}
