@@ -37,7 +37,7 @@ router = APIRouter()
 Db = Annotated[DbSession, Depends(get_db)]
 
 
-async def _attachments_fragment(request: Request, db: Db, ticket_id: uuid.UUID, user):
+async def _attachments_fragment(request: Request, db: Db, ticket_id: uuid.UUID, user, upload_error: str | None = None):
     ticket = await ticket_service.get_one(db, ticket_id, actor=user)
     attachments = await attachments_service.list_by_ticket(db, ticket_id, user)
     return templates.TemplateResponse(
@@ -47,6 +47,7 @@ async def _attachments_fragment(request: Request, db: Db, ticket_id: uuid.UUID, 
             "ticket": ticket,
             "attachments": attachments,
             "is_closed": ticket.status.code == "CLOSED",
+            "upload_error": upload_error,
         },
     )
 
@@ -85,10 +86,14 @@ async def upload_attachment(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except TicketClosedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except FileTooLargeError as exc:
-        raise HTTPException(status_code=413, detail=str(exc)) from exc
-    except InvalidExtensionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (FileTooLargeError, InvalidExtensionError) as exc:
+        # A diferencia de los demas errores de arriba (permisos/estado, casos
+        # raros que no deberian pasar desde la UI normal), estos dos SI los va
+        # a disparar un usuario real con solo elegir un archivo cualquiera —
+        # por eso se renderiza la card con el mensaje en vez de un
+        # HTTPException crudo, que en una peticion HTMX no muestra nada en
+        # pantalla y parece que "no paso nada" al darle a subir.
+        return await _attachments_fragment(request, db, ticket_id, user, upload_error=str(exc))
 
     return await _attachments_fragment(request, db, ticket_id, user)
 

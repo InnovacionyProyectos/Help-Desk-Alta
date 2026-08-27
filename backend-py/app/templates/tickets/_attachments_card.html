@@ -17,21 +17,25 @@
     {% endfor %}
   </div>
 
+  {% if upload_error %}
+  <div class="auth-error" style="margin-bottom:12px;">{{ upload_error }}</div>
+  {% endif %}
+
   {% if is_closed %}
   <p style="color: var(--color-text-muted); font-size: 13px;">El ticket está cerrado; no se pueden agregar adjuntos.</p>
   {% else %}
-  <div class="form-field">
-    <input
-      class="input"
-      type="file"
-      name="file"
-      required
-      hx-post="/tickets/{{ ticket.id }}/attachments"
-      hx-trigger="change"
-      hx-target="#card-attachments"
-      hx-swap="outerHTML"
-      hx-encoding="multipart/form-data"
-    >
-  </div>
+  {# Formulario con botón explícito "Subir adjunto", no un input que sube
+     solo al elegir el archivo (`hx-trigger="change"` sin ningún botón) —
+     ese patrón anterior dependía de que HTMX cargara bien para que algo
+     visible pasara al elegir el archivo; sin un botón, si algo fallaba
+     (red, bloqueador de anuncios, etc.) no había ninguna señal de que
+     hiciera falta hacer algo más. Mismo patrón de <form>+botón que ya usa
+     "Asignar a" en _actions_card.html. #}
+  <form hx-post="/tickets/{{ ticket.id }}/attachments" hx-target="#card-attachments" hx-swap="outerHTML" hx-encoding="multipart/form-data">
+    <div class="form-field">
+      <input class="input" type="file" name="file" required>
+    </div>
+    <button class="btn btn--secondary" type="submit">Subir adjunto</button>
+  </form>
   {% endif %}
 </div>

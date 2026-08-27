@@ -13,3 +13,10 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 # aplicar cambios de código) también fuerza la descarga del CSS más reciente.
 _css_path = Path(__file__).parent / "static" / "css" / "app.css"
 templates.env.globals["asset_v"] = int(_css_path.stat().st_mtime) if _css_path.exists() else 0
+
+# Mismo cache-busting para htmx.js — se dejó de cargar desde el CDN
+# unpkg.com (ver static/js/htmx.js) y se sirve local, así que también
+# necesita esto para que un futuro upgrade de versión le llegue a todo el
+# mundo sin depender de que alguien limpie caché a mano.
+_htmx_path = Path(__file__).parent / "static" / "js" / "htmx.js"
+templates.env.globals["htmx_v"] = int(_htmx_path.stat().st_mtime) if _htmx_path.exists() else 0
