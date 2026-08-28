@@ -17,6 +17,9 @@
     <div class="form-field">
       <label for="description">Descripción</label>
       <textarea class="input" id="description" name="description" rows="5" required>{{ values.description or '' }}</textarea>
+      <p id="new-ticket-paste-status" style="margin:6px 0 0; font-size:12px; color: var(--color-text-muted);">
+        Tip: puede pegar una captura de pantalla aquí (Ctrl+V) para adjuntarla.
+      </p>
     </div>
     <div class="form-field">
       <label for="file">Adjuntar archivo (opcional)</label>
@@ -65,6 +68,9 @@
     <button class="btn btn--primary btn--full" type="submit">Crear ticket</button>
   </form>
 </div>
+
+<script src="/static/js/paste-attach.js"></script>
+<script>initPasteAttach('description', 'file', 'new-ticket-paste-status', 'se enviará junto con el ticket.');</script>
 
 {% if is_staff %}
 <script src="/static/js/ticket-cascade.js"></script>

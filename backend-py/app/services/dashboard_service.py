@@ -3,7 +3,7 @@ que ticket_service.py, funciones puras que reciben `db: AsyncSession`
 explícito."""
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession as DbSession
@@ -13,33 +13,26 @@ from app.models.classification import TicketCategory
 from app.models.ticket import Ticket, TicketStatus
 
 
-def _month_range(month: str) -> tuple[date, date]:
-    """Convierte "YYYY-MM" (formato de <input type="month">) en un rango
-    [inicio, fin_exclusivo) de fechas naturales — fin_exclusivo es el
-    primer día del mes siguiente, así el filtro `created_at >= inicio AND
-    created_at < fin_exclusivo` cubre el mes completo (primer día al
-    último, inclusive), sin depender de a qué hora del último día se creó
-    el ticket."""
-    year_str, month_str = month.split("-")
-    year, mon = int(year_str), int(month_str)
-    start = date(year, mon, 1)
-    end_exclusive = date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1)
-    return start, end_exclusive
-
-
-async def get_admin_metrics(db: DbSession, month: str | None = None) -> dict:
+async def get_admin_metrics(db: DbSession, date_from: date | None = None, date_to: date | None = None) -> dict:
     """Métricas globales: volumen por estado/prioridad/tipo/categoría/área
     y tiempo promedio de resolución.
 
-    `month` (opcional, "YYYY-MM"): si se pasa, TODAS las agregaciones se
-    filtran por `created_at` dentro de ese mes. Si no se pasa (o viene
-    vacío), comportamiento sin cambios respecto a antes de esta mejora —
-    todo el histórico, sin filtrar."""
+    `date_from`/`date_to` (opcionales, cada uno independiente del otro):
+    si se pasa alguno, TODAS las agregaciones se filtran por `created_at`
+    dentro de ese rango — reemplaza el filtro anterior de "mes completo"
+    por uno personalizable (semana específica, rango arbitrario, o un mes
+    entero eligiendo el primer y último día). `date_to` es inclusivo del
+    día completo (se compara contra el día siguiente), igual que antes
+    hacía el filtro de mes con el último día. Si no se pasa ninguno,
+    comportamiento sin cambios respecto a antes — todo el histórico, sin
+    filtrar."""
 
-    date_filter = None
-    if month:
-        start, end_exclusive = _month_range(month)
-        date_filter = (Ticket.created_at >= start, Ticket.created_at < end_exclusive)
+    conditions = []
+    if date_from:
+        conditions.append(Ticket.created_at >= date_from)
+    if date_to:
+        conditions.append(Ticket.created_at < date_to + timedelta(days=1))
+    date_filter = tuple(conditions) if conditions else None
 
     # order_by(display_order) para que el gráfico mantenga siempre el mismo
     # orden de gajos (Abierto→Asignado→...) en vez del orden arbitrario que

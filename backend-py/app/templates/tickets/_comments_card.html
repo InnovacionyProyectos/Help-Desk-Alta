@@ -27,7 +27,10 @@
   {% else %}
   <form hx-post="/tickets/{{ ticket.id }}/comments" hx-target="#card-comments" hx-swap="outerHTML">
     <div class="form-field">
-      <textarea class="input" name="body" rows="3" required placeholder="Escriba un comentario..."></textarea>
+      <textarea class="input" id="comment-body" name="body" rows="3" required placeholder="Escriba un comentario..."></textarea>
+      <p id="comment-paste-status" style="margin:6px 0 0; font-size:12px; color: var(--color-text-muted);">
+        Tip: puede pegar una captura de pantalla aquí (Ctrl+V) para adjuntarla.
+      </p>
     </div>
     {% if is_staff %}
     <div class="form-field" style="flex-direction: row; align-items:center; gap:8px;">
@@ -37,5 +40,20 @@
     {% endif %}
     <button class="btn btn--secondary" type="submit">Comentar</button>
   </form>
+  <script src="/static/js/paste-attach.js"></script>
+  <script>
+    // setTimeout(0): en la carga inicial de la página, la card de
+    // Adjuntos (dueña de "attach-file-input") viene DESPUÉS de esta en
+    // el HTML y todavía no existe en el DOM en el momento en que este
+    // script se ejecuta durante el parseo — un getElementById directo
+    // fallaría. Diferir al siguiente tick deja que el navegador termine
+    // de insertar el resto del documento antes de buscar el input. En
+    // un refresh posterior vía HTMX (esta card se autorefresca con
+    // hx-trigger="ticket-updated from:body") la card de Adjuntos ya
+    // existe de todos modos, así que el setTimeout no cambia nada ahí.
+    setTimeout(function () {
+      initPasteAttach('comment-body', 'attach-file-input', 'comment-paste-status', 'dele clic en "Subir adjunto" en la card de Adjuntos, abajo.');
+    }, 0);
+  </script>
   {% endif %}
 </div>

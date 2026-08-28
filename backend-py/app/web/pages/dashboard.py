@@ -3,6 +3,7 @@ vista distinta según `current_user.role.code` (equivalente combinado de
 dashboard.controller.ts + DashboardPage.tsx/AdminDashboard.tsx/
 TechnicianDashboard.tsx/EndUserDashboard.tsx del frontend React original)."""
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -96,7 +97,8 @@ async def dashboard_page(
     request: Request,
     user: CurrentUser,
     db: Db,
-    month: Annotated[str | None, Query()] = None,
+    date_from: Annotated[str | None, Query()] = None,
+    date_to: Annotated[str | None, Query()] = None,
 ):
     role = user.role.code
     # Técnico ve el mismo panel que Admin (mismos permisos salvo
@@ -104,14 +106,31 @@ async def dashboard_page(
     # admin_classification.py/admin_users.py). Solo Usuario Final tiene
     # una vista propia (sus solicitudes activas).
     if role in ("ADMIN", "TECHNICIAN"):
-        # month llega como "YYYY-MM" desde <input type="month"> o vacío/
-        # ausente ("Ver todo").
-        return await _admin_dashboard(request, user, db, month=month or None)
+        # date_from/date_to llegan como "YYYY-MM-DD" desde los dos
+        # <input type="date"> del panel (filtro personalizable: semana
+        # específica, mes completo eligiendo 1er/último día, o cualquier
+        # rango arbitrario) o vacíos/ausentes ("Ver todo"). `date.fromisoformat`
+        # lanza ValueError con cualquier texto que no sea una fecha válida —
+        # se ignora silenciosamente (queda sin filtrar ese extremo) en vez
+        # de romper la página, ya que esto solo puede pasar manipulando la
+        # URL a mano, no desde el <input type="date"> del formulario.
+        parsed_from = _parse_date(date_from)
+        parsed_to = _parse_date(date_to)
+        return await _admin_dashboard(request, user, db, date_from=parsed_from, date_to=parsed_to)
     return await _end_user_dashboard(request, user, db)
 
 
-async def _admin_dashboard(request: Request, user: User, db: Db, month: str | None = None):
-    metrics = await dashboard_service.get_admin_metrics(db, month=month)
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+async def _admin_dashboard(request: Request, user: User, db: Db, date_from: date | None = None, date_to: date | None = None):
+    metrics = await dashboard_service.get_admin_metrics(db, date_from=date_from, date_to=date_to)
 
     total_tickets = sum(item["total"] for item in metrics["by_status"])
     # % resuelto el mismo día, no el promedio en horas: ver la nota larga
@@ -177,7 +196,8 @@ async def _admin_dashboard(request: Request, user: User, db: Db, month: str | No
             "by_status_chart": by_status_chart,
             "by_category_chart": by_category_chart,
             "treemap_height": TREEMAP_HEIGHT,
-            "month": month or "",
+            "date_from": date_from.isoformat() if date_from else "",
+            "date_to": date_to.isoformat() if date_to else "",
         },
     )
 
