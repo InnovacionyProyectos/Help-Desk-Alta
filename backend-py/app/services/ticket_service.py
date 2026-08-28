@@ -170,6 +170,7 @@ async def list_tickets(
     page: int = 1,
     limit: int = 20,
     status: str | None = None,
+    status_in: list[str] | None = None,
     priority: str | None = None,
     ticket_type: str | None = None,
     requester_id: uuid.UUID | None = None,
@@ -180,7 +181,13 @@ async def list_tickets(
     limit = min(max(limit, 1), 100)
 
     conditions = []
-    if status:
+    if status_in:
+        # Atajo del dashboard ("tickets pendientes de gestión") — un grupo
+        # de varios estados a la vez, no uno solo; tiene prioridad sobre
+        # `status` porque el listado nunca envía los dos al mismo tiempo
+        # (uno viene del <select> del filtro, el otro del link del panel).
+        conditions.append(Ticket.status.has(TicketStatus.code.in_(status_in)))
+    elif status:
         conditions.append(Ticket.status.has(TicketStatus.code == status))
     if priority:
         conditions.append(Ticket.priority == priority)

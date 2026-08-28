@@ -33,10 +33,10 @@
     <p style="margin:2px 0 0; font-size:12px; color: var(--color-text-muted);">de los casos se resuelven el mismo día</p>
   </div>
   {% for card in highlight_cards %}
-  <div class="stat-card">
+  <a class="stat-card" href="/tickets?status_in=OPEN,ASSIGNED,IN_PROGRESS,ON_HOLD,REOPENED" style="text-decoration:none; color:inherit; display:block; cursor:pointer;">
     <p class="stat-card__label">{{ card.label }}</p>
     <p class="stat-card__value">{{ card.value }}</p>
-  </div>
+  </a>
   {% endfor %}
 </div>
 

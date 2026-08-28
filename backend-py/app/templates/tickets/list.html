@@ -6,6 +6,17 @@
   <a class="btn btn--primary" href="/tickets/new">+ Nuevo ticket</a>
 </div>
 
+{% if filter_status_in %}
+<div class="card" style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+  <span style="font-size:14px;">
+    Mostrando tickets pendientes de gestión:
+    {% set codes = filter_status_in.split(',') %}
+    {% for s in statuses if s.code in codes %}{{ s.name }}{{ ", " if not loop.last else "" }}{% endfor %}
+  </span>
+  <a class="link-btn" href="/tickets">Quitar filtro</a>
+</div>
+{% endif %}
+
 <form method="get" action="/tickets" class="filters-bar">
   <div class="form-field" style="min-width:260px;">
     <label for="search">Buscar</label>
@@ -90,10 +101,10 @@
   <div class="pagination">
     <span>Página {{ page }} de {{ total_pages }} ({{ total }} ticket{{ 's' if total != 1 else '' }})</span>
     {% if page > 1 %}
-    <a class="link-btn" href="?page={{ page - 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}&search={{ filter_search | urlencode }}">← Anterior</a>
+    <a class="link-btn" href="?page={{ page - 1 }}&limit={{ limit }}&status={{ filter_status }}&status_in={{ filter_status_in }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}&search={{ filter_search | urlencode }}">← Anterior</a>
     {% endif %}
     {% if page < total_pages %}
-    <a class="link-btn" href="?page={{ page + 1 }}&limit={{ limit }}&status={{ filter_status }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}&search={{ filter_search | urlencode }}">Siguiente →</a>
+    <a class="link-btn" href="?page={{ page + 1 }}&limit={{ limit }}&status={{ filter_status }}&status_in={{ filter_status_in }}&priority={{ filter_priority }}&ticket_type={{ filter_type }}&view={{ view }}&search={{ filter_search | urlencode }}">Siguiente →</a>
     {% endif %}
   </div>
 </div>

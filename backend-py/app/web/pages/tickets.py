@@ -118,6 +118,7 @@ async def list_page(
     page: Annotated[int, Query(ge=1)] = 1,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     status: str = "",
+    status_in: str = "",
     priority: str = "",
     ticket_type: str = "",
     view: str = "",
@@ -132,11 +133,18 @@ async def list_page(
     requester_id = user.id if view == "mine" else None
     assigned_to_id = user.id if view == "assigned" else None
 
+    # `status_in` llega como códigos separados por coma desde el atajo del
+    # panel ("Tickets pendientes de gestión", ver dashboard/admin.html) —
+    # no es un campo del formulario de filtros, así que se pierde en cuanto
+    # el usuario use el <select> normal, que es el comportamiento esperado.
+    status_in_list = [code for code in status_in.split(",") if code] or None
+
     tickets, total, page, limit = await ticket_service.list_tickets(
         db,
         page=page,
         limit=limit,
         status=status or None,
+        status_in=status_in_list,
         priority=priority or None,
         ticket_type=ticket_type or None,
         requester_id=requester_id,
@@ -160,6 +168,7 @@ async def list_page(
             view=view,
             statuses=statuses,
             filter_status=status,
+            filter_status_in=status_in,
             filter_priority=priority,
             filter_type=ticket_type,
             filter_search=search,
